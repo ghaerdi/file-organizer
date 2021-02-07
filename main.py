@@ -4,7 +4,6 @@ import shutil
 # Variables
 download_dir_path: str = "~/Downloads"
 download_dir_path = os.path.expanduser(download_dir_path)
-
 files_extensions: dict = {
     "Image": ['.jpg', '.png', 'jpeg', '.gif', '.tiff', '.psd', '.bmp', '.ico', '.svg'],
     "Text": ['.txt', '.doc', '.docx', 'pptx', '.odf', '.docm', '.pdf'],
@@ -14,31 +13,34 @@ files_extensions: dict = {
 }
 
 # Lambda Functions
-scan_files = lambda dir_path: [file.name for file in os.scandir(dir_path) if file.is_file()]
-scan_directories = lambda dir_path: [directory.name for directory in os.scandir(dir_path) if directory.is_dir()]
+scan_files: [str] = lambda dir_path: [file.name for file in os.scandir(dir_path) if file.is_file()]
 
 # Functions
-def organize_files(dir_path, directory_name, files_extension):
+def organize_files(dir_path: str, directory_name: str, files_extension: [str]):
     for file in scan_files(dir_path):
         for ext in files_extension:
             if (file.find(ext) != -1):
-                create_directory(dir_path, directory_name)
-                shutil.move(f"{dir_path}/{file}", f"{dir_path}/{directory_name}")
-                print(f"{file} -> {directory_name}")
+               move_file(dir_path, directory_name, file) 
 
-def create_directory(dir_path, desired_directory):
-    if not desired_directory in scan_directories(dir_path):
-        os.mkdir(f"{dir_path}/{desired_directory}")
-        print(f"new directory: {desired_directory}")
+def move_file(dir_path: str, directory_name: str, file: str):
+    file_path: str = f"{dir_path}/{file}"
+    desired_directory_path: str = f"{dir_path}/{directory_name}"
+    create_directory(dir_path, directory_name)
+    shutil.move(file_path, desired_directory_path)
+    print(f"{file} -> {directory_name}")
 
-def organize_directory(dir_path, files_ext):
+def create_directory(dir_path: str, desired_directory: str):
+    desired_directory_path: str = f"{dir_path}/{desired_directory}"
+    if not os.path.exists(desired_directory_path):
+        os.mkdir(desired_directory_path)
+        print(f"New directory: {desired_directory}")
+
+def organize_directory(dir_path: str, files_ext: object):
     for directory_name in files_ext:
         if (directory_name != "Other"):
             organize_files(dir_path, directory_name, files_ext.get(directory_name))
         else:
             for file in scan_files(dir_path):
-                create_directory(dir_path, directory_name)
-                shutil.move(f"{dir_path}/{file}", f"{dir_path}/{directory_name}")
-                print(f"{file} -> {directory_name}")
+                move_file(dir_path, directory_name, file)
 
 organize_directory(download_dir_path, files_extensions)
