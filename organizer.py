@@ -3,7 +3,7 @@ import os
 import shutil
 
 # Variables
-download_dir_path: str = "~/Download"
+download_dir_path: str = "~/Downloads"
 download_dir_path = os.path.expanduser(download_dir_path)
 files_extensions: dict = {
     "Image": ['.jpg', '.png', 'jpeg', '.gif', '.tiff', '.psd', '.bmp', '.ico', '.svg'],
