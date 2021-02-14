@@ -2,7 +2,7 @@
 
 ### Description
 
-Organizer is a Python script for organize the Download directory in Audio, Image, Video and Other, depending of the file extension.
+Organizer is a Python script for organize the Download directory in diferent directories depending of the file extension.
 <hr>
 
 ### How to use
