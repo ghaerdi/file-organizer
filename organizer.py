@@ -10,7 +10,7 @@ files_extensions: dict = {
     "Video": ['.mov', '.mp4', '.avi', '.mkv', '.mkv', '.flv', '.wmv'],
     "Audio": ['.mp3', '.wma', '.wav', '.flac'],
     "Compressed": ['.zip', '.rar', '.rar5', '.7z', '.ace', '.gz'],
-    "Executalbe": ['.exe', '.msi', '.deb', '.rpm'],
+    "Executable": ['.exe', '.msi', '.deb', '.rpm'],
     "Other": []
 }
 
