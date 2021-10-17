@@ -8,10 +8,9 @@ pub fn create_dirs() {
     let path = Path::new(&path);
 
     if !path.exists() {
-        let error_msg = format!("unable to create {} directory", value);
-        fs::create_dir(path).expect(error_msg.as_str());
-        println!("{} directory created", value);
+      let error_msg = format!("unable to create {} directory", value);
+      fs::create_dir(path).expect(error_msg.as_str());
+      println!("{} directory created", value);
     }
   }
 }
-

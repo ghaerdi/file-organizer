@@ -1,6 +1,6 @@
-use std::fs;
-use crate::utils;
 use crate::globals;
+use crate::utils;
+use std::fs;
 
 pub fn organize() {
   let dir = fs::read_dir(globals::PATH).expect("unable to open");
@@ -13,24 +13,21 @@ pub fn organize() {
     let ignore_dir = dirs.iter().position(|&v| v == name) != None;
 
     if ignore_dir {
-        continue;
+      continue;
     }
 
     let ext = path.extension();
 
     if ext != None {
-        let dir = map.get(ext.unwrap().to_str().unwrap());
+      let dir = map.get(ext.unwrap().to_str().unwrap());
 
-        if dir != None {
-            utils::move_file(path, dir.unwrap());
-        }
-        else {
-            utils::move_file(path, globals::DIRS[6]);
-        }
-    }
-    else {
+      if dir != None {
+        utils::move_file(path, dir.unwrap());
+      } else {
         utils::move_file(path, globals::DIRS[6]);
+      }
+    } else {
+      utils::move_file(path, globals::DIRS[6]);
     }
   }
 }
-

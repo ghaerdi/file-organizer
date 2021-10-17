@@ -5,4 +5,3 @@ fn main() {
   utils::create_dirs();
   utils::organize();
 }
-
