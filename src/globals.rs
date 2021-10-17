@@ -1,4 +1,4 @@
-pub static PATH: &str = "./download";
+pub static DIR: &str = "Downloads";
 pub static DIRS: [&str; 7] = [
   "Text",
   "Image",

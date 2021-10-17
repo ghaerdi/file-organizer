@@ -2,6 +2,7 @@ mod globals;
 mod utils;
 
 fn main() {
-  utils::create_dirs();
-  utils::organize();
+  let dir = utils::get_download_dir();
+  utils::create_dirs(&dir);
+  utils::organize(&dir);
 }

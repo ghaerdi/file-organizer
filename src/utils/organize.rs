@@ -2,8 +2,8 @@ use crate::globals;
 use crate::utils;
 use std::fs;
 
-pub fn organize() {
-  let dir = fs::read_dir(globals::PATH).expect("unable to open");
+pub fn organize(dir: &String) {
+  let dir = fs::read_dir(dir).expect("unable to open");
   let map = utils::files_extension();
   let dirs = globals::DIRS.to_vec();
 
