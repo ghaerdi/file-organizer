@@ -40,11 +40,10 @@ pub fn get_download_dir() -> String {
         Err(_) => panic!("directory not found"),
       };
 
-    return download.to_str().unwrap().to_string();
+      return download.to_str().unwrap().to_string();
     }
     _ => {
       panic!("to mutch arguments");
     }
   }
 }
-
