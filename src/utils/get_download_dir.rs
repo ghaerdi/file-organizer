@@ -1,8 +1,7 @@
+use crate::globals;
 use directories::UserDirs;
 use std::env;
 use std::path::Path;
-
-use crate::globals;
 
 pub fn get_download_dir() -> String {
   let args: Vec<String> = env::args().collect();
@@ -23,16 +22,16 @@ pub fn get_download_dir() -> String {
           }
 
           return download.to_str().unwrap().to_string();
-        }
+        },
         Some(dir) => {
           if !dir.exists() {
             panic!("not download dir found");
           }
 
           return dir.to_str().unwrap().to_string();
-        }
+        },
       }
-    }
+    },
     2 => {
       let download = Path::new(&args[1]);
       let download = match download.canonicalize() {
@@ -41,9 +40,9 @@ pub fn get_download_dir() -> String {
       };
 
       return download.to_str().unwrap().to_string();
-    }
+    },
     _ => {
       panic!("to mutch arguments");
-    }
+    },
   }
 }

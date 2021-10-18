@@ -1,5 +1,4 @@
-use crate::globals;
-use crate::utils;
+use crate::{globals, utils};
 use std::fs;
 
 pub fn organize(dir: &String) {
@@ -23,10 +22,12 @@ pub fn organize(dir: &String) {
 
       if dir != None {
         utils::move_file(path, dir.unwrap());
-      } else {
+      }
+      else {
         utils::move_file(path, globals::DIRS[6]);
       }
-    } else {
+    }
+    else {
       utils::move_file(path, globals::DIRS[6]);
     }
   }
