@@ -9,3 +9,4 @@ report_todo="Unnumbered"
 imports_granularity="Module"
 match_block_trailing_comma=true
 control_brace_style="ClosingNextLine"
+max_width=80

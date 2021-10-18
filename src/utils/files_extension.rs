@@ -1,5 +1,6 @@
 use crate::globals::{
-  AUDIO_EXT, COMPRESSED_EXT, DIRS, EXECUTABLE_EXT, IMAGE_EXT, TEXT_EXT, VIDEO_EXT,
+  AUDIO_EXT, COMPRESSED_EXT, DIRS, EXECUTABLE_EXT, IMAGE_EXT, TEXT_EXT,
+  VIDEO_EXT,
 };
 use std::collections::HashMap;
 
@@ -16,7 +17,11 @@ pub fn files_extension() -> HashMap<&'static str, &'static str> {
   return map;
 }
 
-fn to_map(map: &mut HashMap<&'static str, &'static str>, ext: &[&'static str], dir: &'static str) {
+fn to_map(
+  map: &mut HashMap<&'static str, &'static str>,
+  ext: &[&'static str],
+  dir: &'static str,
+) {
   for ext in ext {
     map.insert(ext, dir);
   }
