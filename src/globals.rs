@@ -24,6 +24,24 @@ mod test {
     use super::*;
 
     #[test]
+    fn all_arr_values_starts_with_uppercase() {
+        let result: bool = {
+            let mut b = true;
+
+            for value in DIRS {
+                if value[..1] != value[..1].to_uppercase() {
+                    b = false;
+                    break;
+                }
+            }
+
+            b
+        };
+
+        assert_eq!(result, true);
+    }
+
+    #[test]
     fn no_dots_in_files_extension() {
         assert_eq!(start_with_dot(TEXT_EXT.to_vec()), false);
         assert_eq!(start_with_dot(IMAGE_EXT.to_vec()), false);
