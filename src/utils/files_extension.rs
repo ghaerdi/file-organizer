@@ -26,3 +26,33 @@ fn to_map(
     map.insert(ext, dir);
   }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn map_frontend_frameworks() {
+        let mut map= HashMap::new();
+        to_map(&mut map, &["Vue", "Svelte"], "Frontend");
+
+        let mut expect = HashMap::new();
+        expect.insert("Vue", "Frontend");
+        expect.insert("Svelte", "Frontend");
+
+        assert_eq!(map, expect);
+    }
+
+    #[test]
+    fn files_ext() {
+        let map = files_extension();
+
+        assert_eq!(map.get("txt").unwrap_or(&""), &"Text");
+        assert_eq!(map.get("png").unwrap_or(&""), &"Image");
+        assert_eq!(map.get("mp3").unwrap_or(&""), &"Audio");
+        assert_eq!(map.get("mp4").unwrap_or(&""), &"Video");
+        assert_eq!(map.get("rar").unwrap_or(&""), &"Compressed");
+        assert_eq!(map.get("exe").unwrap_or(&""), &"Executable");
+    }
+}
