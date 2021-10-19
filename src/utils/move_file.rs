@@ -10,6 +10,6 @@ pub fn move_file(from: PathBuf, to: String) {
   fs::rename(&from, &to).expect("unable to move");
   println!("{}", from.to_str().unwrap());
   println!("moved to");
-  println!("{}",  to);
+  println!("{}", to);
   println!("");
 }

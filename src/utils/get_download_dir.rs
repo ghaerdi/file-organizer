@@ -48,40 +48,42 @@ pub fn get_download_dir(args: Vec<String>) -> String {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use std::panic::catch_unwind;
+  use super::*;
+  use std::panic::catch_unwind;
 
-    #[test]
-    fn without_arguments() {
-        let args = vec![""];
-        let args = args.iter().map(|&v| v.to_string()).collect();
-        let result = get_download_dir(args);
-        let catch_result = catch_unwind(|| println!("Downloads directory not found"));
+  #[test]
+  fn without_arguments() {
+    let args = vec![""];
+    let args = args.iter().map(|&v| v.to_string()).collect();
+    let result = get_download_dir(args);
+    let catch_result =
+      catch_unwind(|| println!("Downloads directory not found"));
 
-        match catch_result {
-            Ok(_) => assert!(result.contains("Downloads")),
-            Err(_) => assert!(catch_result.is_err()),
-        }
+    match catch_result {
+      Ok(_) => assert!(result.contains("Downloads")),
+      Err(_) => assert!(catch_result.is_err()),
     }
+  }
 
-    #[test]
-    fn with_one_argument() {
-        let args = vec!["", "Downloads"];
-        let args = args.iter().map(|&v| v.to_string()).collect();
-        let result = get_download_dir(args);
-        let catch_result = catch_unwind(|| println!("Downloads directory not found"));
+  #[test]
+  fn with_one_argument() {
+    let args = vec!["", "Downloads"];
+    let args = args.iter().map(|&v| v.to_string()).collect();
+    let result = get_download_dir(args);
+    let catch_result =
+      catch_unwind(|| println!("Downloads directory not found"));
 
-        match catch_result {
-            Ok(_) => assert!(result.contains("Downloads")),
-            Err(_) => assert!(catch_result.is_err()),
-        }
+    match catch_result {
+      Ok(_) => assert!(result.contains("Downloads")),
+      Err(_) => assert!(catch_result.is_err()),
     }
+  }
 
-    #[test]
-    #[should_panic]
-    fn pass_more_of_one_argument() {
-        let args = vec!["", "Foo", "Bar"];
-        let args = args.iter().map(|&v| v.to_string()).collect();
-        get_download_dir(args);
-    }
+  #[test]
+  #[should_panic]
+  fn pass_more_of_one_argument() {
+    let args = vec!["", "Foo", "Bar"];
+    let args = args.iter().map(|&v| v.to_string()).collect();
+    get_download_dir(args);
+  }
 }
