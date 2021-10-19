@@ -21,16 +21,16 @@ pub fn get_download_dir(args: Vec<String>) -> String {
           }
 
           return download.to_str().unwrap().to_string();
-        }
+        },
         Some(dir) => {
           if !dir.exists() {
             panic!("{}", DOWNLOAD_DIR_NOT_FOUND);
           }
 
           return dir.to_str().unwrap().to_string();
-        }
+        },
       }
-    }
+    },
     2 => {
       let download = Path::new(&args[1]);
       let download = match download.canonicalize() {
@@ -39,10 +39,10 @@ pub fn get_download_dir(args: Vec<String>) -> String {
       };
 
       return download.to_str().unwrap().to_string();
-    }
+    },
     _ => {
       panic!("to mutch arguments");
-    }
+    },
   }
 }
 
