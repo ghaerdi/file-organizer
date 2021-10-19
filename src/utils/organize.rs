@@ -23,12 +23,10 @@ pub fn organize(path: String) {
       if dir != None {
         let dir = format!("{}/{}", path, dir.unwrap());
         utils::move_file(entry, dir);
-      }
-      else {
+      } else {
         utils::move_file(entry, globals::DIRS[6].to_string());
       }
-    }
-    else {
+    } else {
       utils::move_file(entry, globals::DIRS[6].to_string());
     }
   }
