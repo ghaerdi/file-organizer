@@ -1,11 +1,8 @@
 use crate::globals;
 use directories::UserDirs;
-use std::env;
 use std::path::Path;
 
-pub fn get_download_dir() -> String {
-  let args: Vec<String> = env::args().collect();
-
+pub fn get_download_dir(args: Vec<String>) -> String {
   match args.len() {
     1 => {
       let user = UserDirs::new().unwrap();
@@ -46,3 +43,14 @@ pub fn get_download_dir() -> String {
     },
   }
 }
+
+// #[cfg(test)]
+
+// mod test {
+//     use super::*;
+
+//     #[test]
+//     fn get_download_dir_without_arguments() {
+//         assert_eq!(get_download_dir())
+//     }
+// }
