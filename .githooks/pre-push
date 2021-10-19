@@ -4,7 +4,7 @@
 cargo build
 
 # test
-# cargo test
+cargo test
 
 # format the code and commit it
 cargo fmt
