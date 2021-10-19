@@ -2,6 +2,8 @@ use crate::globals;
 use directories::UserDirs;
 use std::path::Path;
 
+static DOWNLOAD_DIR_NOT_FOUND: &str = "Downloads directory not found";
+
 pub fn get_download_dir(args: Vec<String>) -> String {
   match args.len() {
     1 => {
@@ -15,14 +17,14 @@ pub fn get_download_dir(args: Vec<String>) -> String {
           let download = Path::new(&download);
 
           if !download.exists() {
-            panic!("not download dir found");
+            panic!("{}", DOWNLOAD_DIR_NOT_FOUND);
           }
 
           return download.to_str().unwrap().to_string();
         },
         Some(dir) => {
           if !dir.exists() {
-            panic!("not download dir found");
+            panic!("{}", DOWNLOAD_DIR_NOT_FOUND);
           }
 
           return dir.to_str().unwrap().to_string();
@@ -33,7 +35,7 @@ pub fn get_download_dir(args: Vec<String>) -> String {
       let download = Path::new(&args[1]);
       let download = match download.canonicalize() {
         Ok(dir) => dir,
-        Err(_) => panic!("directory not found"),
+        Err(_) => panic!("{}", DOWNLOAD_DIR_NOT_FOUND),
       };
 
       return download.to_str().unwrap().to_string();
@@ -44,13 +46,42 @@ pub fn get_download_dir(args: Vec<String>) -> String {
   }
 }
 
-// #[cfg(test)]
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::panic::catch_unwind;
 
-// mod test {
-//     use super::*;
+    #[test]
+    fn without_arguments() {
+        let args = vec![""];
+        let args = args.iter().map(|&v| v.to_string()).collect();
+        let result = get_download_dir(args);
+        let catch_result = catch_unwind(|| println!("Downloads directory not found"));
 
-//     #[test]
-//     fn get_download_dir_without_arguments() {
-//         assert_eq!(get_download_dir())
-//     }
-// }
+        match catch_result {
+            Ok(_) => assert!(result.contains("Downloads")),
+            Err(_) => assert!(catch_result.is_err()),
+        }
+    }
+
+    #[test]
+    fn with_one_argument() {
+        let args = vec!["", "Downloads"];
+        let args = args.iter().map(|&v| v.to_string()).collect();
+        let result = get_download_dir(args);
+        let catch_result = catch_unwind(|| println!("Downloads directory not found"));
+
+        match catch_result {
+            Ok(_) => assert!(result.contains("Downloads")),
+            Err(_) => assert!(catch_result.is_err()),
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn pass_more_of_one_argument() {
+        let args = vec!["", "Foo", "Bar"];
+        let args = args.iter().map(|&v| v.to_string()).collect();
+        get_download_dir(args);
+    }
+}
