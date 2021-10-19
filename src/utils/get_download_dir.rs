@@ -55,13 +55,11 @@ mod test {
   fn without_arguments() {
     let args = vec![""];
     let args = args.iter().map(|&v| v.to_string()).collect();
-    let result = get_download_dir(args);
-    let catch_result =
-      catch_unwind(|| println!("Downloads directory not found"));
+    let result = catch_unwind(|| get_download_dir(args));
 
-    match catch_result {
-      Ok(_) => assert!(result.contains("Downloads")),
-      Err(_) => assert!(catch_result.is_err()),
+    match result {
+      Ok(dir) => assert!(dir.contains("Downloads")),
+      Err(_) => assert!(result.is_err()),
     }
   }
 
@@ -69,13 +67,11 @@ mod test {
   fn with_one_argument() {
     let args = vec!["", "Downloads"];
     let args = args.iter().map(|&v| v.to_string()).collect();
-    let result = get_download_dir(args);
-    let catch_result =
-      catch_unwind(|| println!("Downloads directory not found"));
+    let result = catch_unwind(|| get_download_dir(args));
 
-    match catch_result {
-      Ok(_) => assert!(result.contains("Downloads")),
-      Err(_) => assert!(catch_result.is_err()),
+    match result {
+      Ok(dir) => assert!(dir.contains("Downloads")),
+      Err(_) => assert!(result.is_err()),
     }
   }
 
