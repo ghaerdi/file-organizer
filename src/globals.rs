@@ -38,17 +38,17 @@ mod test {
       b
     };
 
-    assert_eq!(result, true);
+    assert!(result);
   }
 
   #[test]
   fn no_dots_in_files_extension() {
-    assert_eq!(start_with_dot(TEXT_EXT.to_vec()), false);
-    assert_eq!(start_with_dot(IMAGE_EXT.to_vec()), false);
-    assert_eq!(start_with_dot(AUDIO_EXT.to_vec()), false);
-    assert_eq!(start_with_dot(VIDEO_EXT.to_vec()), false);
-    assert_eq!(start_with_dot(COMPRESSED_EXT.to_vec()), false);
-    assert_eq!(start_with_dot(EXECUTABLE_EXT.to_vec()), false);
+    assert!(!start_with_dot(TEXT_EXT.to_vec()));
+    assert!(!start_with_dot(IMAGE_EXT.to_vec()));
+    assert!(!start_with_dot(AUDIO_EXT.to_vec()));
+    assert!(!start_with_dot(VIDEO_EXT.to_vec()));
+    assert!(!start_with_dot(COMPRESSED_EXT.to_vec()));
+    assert!(!start_with_dot(EXECUTABLE_EXT.to_vec()));
   }
 
   fn start_with_dot(arr: Vec<&'static str>) -> bool {
