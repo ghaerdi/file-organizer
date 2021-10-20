@@ -9,4 +9,3 @@ fn main() {
   utils::create_dirs(&dir);
   utils::organize(dir);
 }
-

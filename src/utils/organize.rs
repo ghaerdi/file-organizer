@@ -31,10 +31,10 @@ pub fn organize(path: String) {
       }
     }
     else {
-        if consts::OS != "windows" {
-            let dir = format!("{}/{}", path, globals::DIRS[6]);
-            utils::move_file(entry, dir);
-        }
+      if consts::OS != "windows" {
+        let dir = format!("{}/{}", path, globals::DIRS[6]);
+        utils::move_file(entry, dir);
+      }
     }
   }
 }
