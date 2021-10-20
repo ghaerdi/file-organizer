@@ -1,4 +1,5 @@
 use crate::{globals, utils};
+use std::env::consts;
 use std::fs;
 
 pub fn organize(path: String) {
@@ -30,8 +31,10 @@ pub fn organize(path: String) {
       }
     }
     else {
-        let dir = format!("{}/{}", path, globals::DIRS[6]);
-        utils::move_file(entry, dir);
+        if consts::OS != "windows" {
+            let dir = format!("{}/{}", path, globals::DIRS[6]);
+            utils::move_file(entry, dir);
+        }
     }
   }
 }
