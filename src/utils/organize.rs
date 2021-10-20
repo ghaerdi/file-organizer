@@ -25,11 +25,13 @@ pub fn organize(path: String) {
         utils::move_file(entry, dir);
       }
       else {
-        utils::move_file(entry, globals::DIRS[6].to_string());
+        let dir = format!("{}/{}", path, globals::DIRS[6]);
+        utils::move_file(entry, dir);
       }
     }
     else {
-      utils::move_file(entry, globals::DIRS[6].to_string());
+        let dir = format!("{}/{}", path, globals::DIRS[6]);
+        utils::move_file(entry, dir);
     }
   }
 }
