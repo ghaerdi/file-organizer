@@ -55,7 +55,7 @@ mod test {
     utils::create_dirs(&DIR.to_string());
 
     let files = vec![
-      "foo.txt", "foo.png", "foo.mp3", "foo.mp4", "foo.zip", "foo.exe",
+      "foo.txt", "foo.png", "foo.mp3", "foo.mp4", "foo.zip", "foo.exe", "foo.bar",
     ];
 
     create_files(&files);
@@ -68,6 +68,7 @@ mod test {
       "Video/foo.mp4",
       "Compressed/foo.zip",
       "Executable/foo.exe",
+      "Other/foo.bar"
     ];
     assert_all(expect);
 
