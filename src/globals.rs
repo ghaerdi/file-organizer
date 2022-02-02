@@ -53,10 +53,10 @@ mod test {
 
   fn start_with_dot(arr: Vec<&'static str>) -> bool {
     for s in arr {
-      if s.starts_with(".") {
+      if s.starts_with('.') {
         return true;
       }
     }
-    return false;
+    false
   }
 }

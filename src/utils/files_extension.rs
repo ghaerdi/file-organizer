@@ -14,7 +14,7 @@ pub fn files_extension() -> HashMap<&'static str, &'static str> {
   to_map(&mut map, &COMPRESSED_EXT, DIRS[4]);
   to_map(&mut map, &EXECUTABLE_EXT, DIRS[5]);
 
-  return map;
+  map
 }
 
 fn to_map(

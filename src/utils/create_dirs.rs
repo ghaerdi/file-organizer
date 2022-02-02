@@ -2,14 +2,14 @@ use crate::globals;
 use std::fs;
 use std::path::Path;
 
-pub fn create_dirs(dir: &String) {
+pub fn create_dirs(dir: &str) {
   for value in globals::DIRS {
     let path = format!("{}/{}", dir, value);
     let path = Path::new(&path);
 
     if !path.exists() {
       let error_msg = format!("unable to create {} directory", value);
-      fs::create_dir(path).expect(error_msg.as_str());
+      fs::create_dir(path).unwrap_or_else(|_| { panic!("{}", error_msg) });
       println!("{} directory created", value);
     }
   }
@@ -27,7 +27,7 @@ mod test {
   fn create_directories() {
     let main_dir = "./create_dirs";
     fs::create_dir(&main_dir).expect("unable to create");
-    create_dirs(&main_dir.to_string());
+    create_dirs(&main_dir);
 
     assert!(Path::new("./create_dirs/Text").exists());
     assert!(Path::new("./create_dirs/Image").exists());

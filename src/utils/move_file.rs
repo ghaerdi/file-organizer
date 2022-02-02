@@ -11,5 +11,5 @@ pub fn move_file(from: PathBuf, to: String) {
   println!("{}", from.to_str().unwrap());
   println!("moved to");
   println!("{}", to);
-  println!("");
+  println!();
 }
