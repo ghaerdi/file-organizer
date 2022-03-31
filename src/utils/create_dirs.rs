@@ -9,7 +9,7 @@ pub fn create_dirs(dir: &str) {
 
     if !path.exists() {
       let error_msg = format!("unable to create {} directory", value);
-      fs::create_dir(path).unwrap_or_else(|_| { panic!("{}", error_msg) });
+      fs::create_dir(path).unwrap_or_else(|_| panic!("{}", error_msg));
       println!("{} directory created", value);
     }
   }

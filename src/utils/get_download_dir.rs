@@ -4,7 +4,7 @@ use std::path::Path;
 
 static DOWNLOAD_DIR_NOT_FOUND: &str = "Downloads directory not found";
 
-pub fn get_download_dir(args: Vec<String>) -> String {
+pub fn get_download_dir(args: &[&str]) -> String {
   match args.len() {
     1 => {
       let user = UserDirs::new().unwrap();
@@ -54,8 +54,7 @@ mod test {
   #[test]
   fn without_arguments() {
     let args = vec![""];
-    let args = args.iter().map(|&v| v.to_string()).collect();
-    let result = catch_unwind(|| get_download_dir(args));
+    let result = catch_unwind(|| get_download_dir(&args));
 
     match result {
       Ok(dir) => assert!(dir.contains("Downloads")),
@@ -66,8 +65,7 @@ mod test {
   #[test]
   fn with_one_argument() {
     let args = vec!["", "Downloads"];
-    let args = args.iter().map(|&v| v.to_string()).collect();
-    let result = catch_unwind(|| get_download_dir(args));
+    let result = catch_unwind(|| get_download_dir(&args));
 
     match result {
       Ok(dir) => assert!(dir.contains("Downloads")),
@@ -79,7 +77,6 @@ mod test {
   #[should_panic]
   fn pass_more_of_one_argument() {
     let args = vec!["", "Foo", "Bar"];
-    let args = args.iter().map(|&v| v.to_string()).collect();
-    get_download_dir(args);
+    get_download_dir(&args);
   }
 }

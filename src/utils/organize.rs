@@ -2,7 +2,7 @@ use crate::{globals, utils};
 use std::env::consts;
 use std::fs;
 
-pub fn organize(path: String) {
+pub fn organize(path: &str) {
   let main_dir = fs::read_dir(&path).expect("unable to open");
   let map = utils::files_extension();
   let dirs = globals::DIRS.to_vec();
@@ -24,13 +24,11 @@ pub fn organize(path: String) {
       if dir != None {
         let dir = format!("{}/{}", path, dir.unwrap());
         utils::move_file(entry, dir);
-      }
-      else {
+      } else {
         let dir = format!("{}/{}", path, globals::DIRS[6]);
         utils::move_file(entry, dir);
       }
-    }
-    else if consts::OS != "windows" {
+    } else if consts::OS != "windows" {
       let dir = format!("{}/{}", path, globals::DIRS[6]);
       utils::move_file(entry, dir);
     }
@@ -53,11 +51,12 @@ mod test {
     utils::create_dirs(&DIR.to_string());
 
     let files = vec![
-      "foo.txt", "foo.png", "foo.mp3", "foo.mp4", "foo.zip", "foo.exe", "foo.bar",
+      "foo.txt", "foo.png", "foo.mp3", "foo.mp4", "foo.zip", "foo.exe",
+      "foo.bar",
     ];
 
     create_files(&files);
-    organize(DIR.to_string());
+    organize(DIR);
 
     let expect = vec![
       "Text/foo.txt",
@@ -66,7 +65,7 @@ mod test {
       "Video/foo.mp4",
       "Compressed/foo.zip",
       "Executable/foo.exe",
-      "Other/foo.bar"
+      "Other/foo.bar",
     ];
     assert_all(expect);
 
