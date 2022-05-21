@@ -10,7 +10,7 @@ Organizer is a Rust script to organize the Download directory in diferent direct
 1. Install rustup.
 2. Download this repository.
 ```console
-git clone https://github.com/ghaerdi/file-organizer.git
+git clone https://github.com/yacosta738/file-organizer.git
 ```
 3. Run `install.sh` in the directory.
 
