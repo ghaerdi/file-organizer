@@ -17,7 +17,7 @@ git clone https://github.com/ghaerdi/file-organizer.git
 ### How to use
 
 ```console
-organize
+organizer
 ```
 You can also pass a directory as argument using relative path if you want specify the folder to organize.
 
