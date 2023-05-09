@@ -1,18 +1,16 @@
 #!/bin/sh
 cargo build --release
-# if the user is not root, then we need to run the script as root to install and copy the binary to /usr/bin
-# cp ./target/release/file-organizer /usr/bin/organizer
-# chmod +x /usr/bin/organizer
-# shellcheck disable=SC2039
+
 if [[ $OSTYPE == 'darwin'* ]]; then
-    cp ./target/release/file-organizer /usr/local/bin/organizer
-    chmod +x /usr/local/bin/organizer
+    target_path="/usr/local/bin/organizer"
 else
-  if [ "$(id -u)" != "0" ]; then
-      sudo cp ./target/release/file-organizer /usr/bin/organizer
-      sudo chmod +x /usr/bin/organizer
-  else
-      cp ./target/release/file-organizer /usr/bin/organizer
-      chmod +x /usr/bin/organizer
-  fi
+    target_path="/usr/bin/organizer"
+fi
+
+if [ "$(id -u)" != "0" ]; then
+    sudo cp ./target/release/file-organizer "$target_path"
+    sudo chmod +x "$target_path"
+else
+    cp ./target/release/file-organizer "$target_path"
+    chmod +x "$target_path"
 fi
