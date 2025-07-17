@@ -3,14 +3,14 @@ use std::env::consts;
 use std::fs;
 
 pub fn organize(path: &str) {
-  let main_dir = fs::read_dir(&path).expect("unable to open");
+  let main_dir = fs::read_dir(path).expect("unable to open");
   let map = utils::files_extension();
   let dirs = globals::DIRS.to_vec();
 
   for entry in main_dir {
     let entry = entry.unwrap().path();
     let name = entry.file_name().unwrap().to_str().unwrap();
-    let ignore_dir = dirs.iter().position(|&v| v == name) != None;
+    let ignore_dir = dirs.contains(&name);
 
     if ignore_dir {
       continue;
@@ -18,10 +18,10 @@ pub fn organize(path: &str) {
 
     let ext = entry.extension();
 
-    if ext != None {
+    if ext.is_some() {
       let dir = map.get(ext.unwrap().to_str().unwrap());
 
-      if dir != None {
+      if dir.is_some() {
         let dir = format!("{}/{}", path, dir.unwrap());
         utils::move_file(entry, dir);
       } else {

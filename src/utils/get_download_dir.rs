@@ -20,14 +20,14 @@ pub fn get_download_dir(args: &[&str]) -> String {
             panic!("{}", DOWNLOAD_DIR_NOT_FOUND);
           }
 
-          return download.to_str().unwrap().to_string();
+          download.to_str().unwrap().to_string()
         },
         Some(dir) => {
           if !dir.exists() {
             panic!("{}", DOWNLOAD_DIR_NOT_FOUND);
           }
 
-          return dir.to_str().unwrap().to_string();
+          dir.to_str().unwrap().to_string()
         },
       }
     },
@@ -38,7 +38,7 @@ pub fn get_download_dir(args: &[&str]) -> String {
         Err(_) => panic!("{}", DOWNLOAD_DIR_NOT_FOUND),
       };
 
-      return download.to_str().unwrap().to_string();
+      download.to_str().unwrap().to_string()
     },
     _ => {
       panic!("to mutch arguments");
