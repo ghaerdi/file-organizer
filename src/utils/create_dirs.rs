@@ -4,13 +4,13 @@ use std::path::Path;
 
 pub fn create_dirs(dir: &str) {
   for value in globals::DIRS {
-    let path = format!("{}/{}", dir, value);
+    let path = format!("{dir}/{value}");
     let path = Path::new(&path);
 
     if !path.exists() {
-      let error_msg = format!("unable to create {} directory", value);
+      let error_msg = format!("unable to create {value} directory");
       fs::create_dir(path).unwrap_or_else(|_| panic!("{}", error_msg));
-      println!("{} directory created", value);
+      println!("{value} directory created");
     }
   }
 }
