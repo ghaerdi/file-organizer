@@ -3,7 +3,7 @@ use crate::{globals, utils};
 use std::env::consts;
 use std::fs;
 
-pub fn organize(path: &str) -> Result<(), AnyError> {
+pub fn organize(path: &str, dry_run: bool) -> Result<(), AnyError> {
   let main_dir = fs::read_dir(path).map_err(AnyError::OpenDir)?;
   let map = utils::files_extension();
   let dirs = globals::DIRS.to_vec();
@@ -26,11 +26,11 @@ pub fn organize(path: &str) -> Result<(), AnyError> {
         let dir = map
           .get(ext)
           .map_or_else(|| format!("{path}/{other}"), |d| format!("{path}/{d}"));
-        utils::move_file(&entry, &dir)?;
+        utils::move_file(&entry, &dir, dry_run)?;
       },
       None if consts::OS != "windows" => {
         let dir = format!("{path}/{other}");
-        utils::move_file(&entry, &dir)?;
+        utils::move_file(&entry, &dir, dry_run)?;
       },
       None => {},
     }
@@ -65,7 +65,7 @@ mod test {
     ];
 
     create_files(dir, &files);
-    organize(dir).expect("unable to organize");
+    organize(dir, false).expect("unable to organize");
 
     let expect = vec![
       "Text/foo.txt",
@@ -86,12 +86,34 @@ mod test {
     let dir = temp.path().to_str().expect("temp path is utf-8");
     utils::create_dirs(dir).expect("unable to create subdirectories");
     create_files(dir, &["a.txt", "b.png"]);
-    organize(dir).expect("organize #1");
-    organize(dir).expect("organize #2");
+    organize(dir, false).expect("organize #1");
+    organize(dir, false).expect("organize #2");
     assert!(Path::new(&format!("{dir}/Text/a.txt")).exists());
     assert!(Path::new(&format!("{dir}/Image/b.png")).exists());
   }
 
+  #[test]
+  fn organize_dry_run_moves_nothing() {
+    let temp = TempDir::new("organize_dry");
+    let dir = temp.path().to_str().expect("temp path is utf-8");
+    utils::create_dirs(dir).expect("unable to create subdirectories");
+    create_files(dir, &["a.txt", "b.png"]);
+
+    organize(dir, true).expect("dry run should succeed");
+
+    // No file should have been relocated into a category directory.
+    assert!(
+      !Path::new(&format!("{dir}/Text/a.txt")).exists(),
+      "dry run must not move files"
+    );
+    assert!(
+      !Path::new(&format!("{dir}/Image/b.png")).exists(),
+      "dry run must not move files"
+    );
+    // Originals remain in place.
+    assert!(Path::new(&format!("{dir}/a.txt")).exists());
+    assert!(Path::new(&format!("{dir}/b.png")).exists());
+  }
   fn create_files(dir: &str, files: &[&str]) {
     for f in files {
       File::create(format!("{dir}/{f}")).expect("unable to create file");

@@ -2,7 +2,13 @@ use crate::error::AnyError;
 use std::fs;
 use std::path::Path;
 
-pub fn move_file(from: &Path, to: &str) -> Result<(), AnyError> {
+/// Move `from` into directory `to`, keeping the original file name unless it
+/// collides with an existing file (in which case a numeric suffix is added so
+/// nothing is ever overwritten).
+///
+/// When `dry_run` is true, the destination is computed and printed but nothing
+/// is renamed, so the caller can preview what would happen.
+pub fn move_file(from: &Path, to: &str, dry_run: bool) -> Result<(), AnyError> {
   let file_name =
     from.file_name().and_then(|n| n.to_str()).ok_or_else(|| {
       AnyError::FileName {
@@ -10,6 +16,13 @@ pub fn move_file(from: &Path, to: &str) -> Result<(), AnyError> {
       }
     })?;
   let dest = unique_dest(to, file_name);
+
+  if dry_run {
+    println!("would move to");
+    println!("{dest}");
+    println!();
+    return Ok(());
+  }
 
   fs::rename(from, &dest).map_err(|source| AnyError::MoveFile {
     to: dest.clone(),
@@ -67,7 +80,7 @@ mod test {
     let dst_dir = temp.path().join("dst");
     fs::create_dir(&dst_dir).expect("create target dir");
 
-    move_file(&src, dst_dir.to_str().expect("utf-8"))
+    move_file(&src, dst_dir.to_str().expect("utf-8"), false)
       .expect("move should succeed");
 
     let moved = dst_dir.join("a.txt");
@@ -82,11 +95,36 @@ mod test {
     File::create(&src).expect("create source file");
 
     let missing = temp.path().join("does_not_exist");
-    let err = move_file(&src, missing.to_str().expect("utf-8"))
+    let err = move_file(&src, missing.to_str().expect("utf-8"), false)
       .expect_err("moving into nonexistent dir must fail");
     assert!(matches!(err, AnyError::MoveFile { .. }));
     // Source untouched.
     assert!(src.exists());
+  }
+
+  #[test]
+  fn dry_run_leaves_source_and_dest_untouched() {
+    let temp = TempDir::new("move_dry");
+    let src = temp.path().join("a.txt");
+    fs::write(&src, "content").expect("create source file");
+
+    let dst_dir = temp.path().join("dst");
+    fs::create_dir(&dst_dir).expect("create target dir");
+
+    move_file(&src, dst_dir.to_str().expect("utf-8"), true)
+      .expect("dry run should succeed");
+
+    // Nothing moved.
+    assert!(src.exists(), "source must remain during dry run");
+    assert!(
+      !dst_dir.join("a.txt").exists(),
+      "no file should land in target during dry run"
+    );
+    assert_eq!(
+      fs::read_to_string(&src).expect("read source"),
+      "content",
+      "source content unchanged"
+    );
   }
 
   #[test]
@@ -102,7 +140,7 @@ mod test {
     let src = temp.path().join("a.txt");
     fs::write(&src, "new").expect("create source file");
 
-    move_file(&src, dst_dir.to_str().expect("utf-8"))
+    move_file(&src, dst_dir.to_str().expect("utf-8"), false)
       .expect("move should succeed");
 
     // Original preserved.
@@ -140,11 +178,11 @@ mod test {
 
     let src = temp.path().join("a.txt");
     fs::write(&src, "copy1").expect("create source");
-    move_file(&src, dst_dir.to_str().expect("utf-8")).expect("move 1");
+    move_file(&src, dst_dir.to_str().expect("utf-8"), false).expect("move 1");
 
     let src2 = temp.path().join("a.txt");
     fs::write(&src2, "copy2").expect("create source 2");
-    move_file(&src2, dst_dir.to_str().expect("utf-8")).expect("move 2");
+    move_file(&src2, dst_dir.to_str().expect("utf-8"), false).expect("move 2");
 
     // Original never touched across both collisions.
     assert_eq!(
