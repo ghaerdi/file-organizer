@@ -48,11 +48,11 @@ mod test {
   fn files_ext() {
     let map = files_extension();
 
-    assert_eq!(map.get("txt").unwrap_or(&""), &"Text");
-    assert_eq!(map.get("png").unwrap_or(&""), &"Image");
-    assert_eq!(map.get("mp3").unwrap_or(&""), &"Audio");
-    assert_eq!(map.get("mp4").unwrap_or(&""), &"Video");
-    assert_eq!(map.get("rar").unwrap_or(&""), &"Compressed");
-    assert_eq!(map.get("exe").unwrap_or(&""), &"Executable");
+    assert_eq!(map.get("txt"), Some(&"Text"));
+    assert_eq!(map.get("png"), Some(&"Image"));
+    assert_eq!(map.get("mp3"), Some(&"Audio"));
+    assert_eq!(map.get("mp4"), Some(&"Video"));
+    assert_eq!(map.get("rar"), Some(&"Compressed"));
+    assert_eq!(map.get("exe"), Some(&"Executable"));
   }
 }

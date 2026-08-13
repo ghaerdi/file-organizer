@@ -42,25 +42,30 @@ pub fn organize(path: &str) -> Result<(), AnyError> {
 mod test {
   #![allow(clippy::expect_used, clippy::unwrap_used, clippy::indexing_slicing)]
   use super::*;
+  use crate::test_utils::TempDir;
   use crate::utils;
-  use std::fs;
   use std::fs::File;
   use std::path::Path;
 
-  const DIR: &str = "./.move_file";
-
   #[test]
   fn organize_files() {
-    fs::create_dir(DIR).expect("unable to create dir");
-    utils::create_dirs(DIR).expect("unable to create subdirectories");
+    let temp = TempDir::new("organize");
+    let dir = temp.path().to_str().expect("temp path is utf-8");
+    utils::create_dirs(dir).expect("unable to create subdirectories");
 
     let files = vec![
-      "foo.txt", "foo.png", "foo.mp3", "foo.mp4", "foo.zip", "foo.exe",
+      "foo.txt",
+      "foo.png",
+      "foo.mp3",
+      "foo.mp4",
+      "foo.zip",
+      "foo.exe",
       "foo.bar",
+      "foo_noext",
     ];
 
-    create_files(&files);
-    organize(DIR).expect("unable to organize");
+    create_files(dir, &files);
+    organize(dir).expect("unable to organize");
 
     let expect = vec![
       "Text/foo.txt",
@@ -70,23 +75,32 @@ mod test {
       "Compressed/foo.zip",
       "Executable/foo.exe",
       "Other/foo.bar",
+      "Other/foo_noext",
     ];
-    assert_all(expect);
-
-    fs::remove_dir_all(DIR).expect("unable to remove");
+    assert_all(dir, expect);
   }
 
-  fn create_files(files: &[&str]) {
+  #[test]
+  fn organize_idempotent() {
+    let temp = TempDir::new("organize_idem");
+    let dir = temp.path().to_str().expect("temp path is utf-8");
+    utils::create_dirs(dir).expect("unable to create subdirectories");
+    create_files(dir, &["a.txt", "b.png"]);
+    organize(dir).expect("organize #1");
+    organize(dir).expect("organize #2");
+    assert!(Path::new(&format!("{dir}/Text/a.txt")).exists());
+    assert!(Path::new(&format!("{dir}/Image/b.png")).exists());
+  }
+
+  fn create_files(dir: &str, files: &[&str]) {
     for f in files {
-      let path = format!("{DIR}/{f}");
-      File::create(path).expect("unable to create file");
+      File::create(format!("{dir}/{f}")).expect("unable to create file");
     }
   }
 
-  fn assert_all(files: Vec<&str>) {
+  fn assert_all(dir: &str, files: Vec<&str>) {
     for f in files {
-      let path = format!("{DIR}/{f}");
-      assert!(Path::new(&path).exists());
+      assert!(Path::new(&format!("{dir}/{f}")).exists());
     }
   }
 }

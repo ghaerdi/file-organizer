@@ -7,17 +7,7 @@ pub fn get_download_dir(args: &[&str]) -> Result<String, AnyError> {
   match args.len() {
     1 => {
       let user = UserDirs::new().ok_or(AnyError::DownloadDirNotFound)?;
-      let fallback = format!("{}/{}", user.home_dir().display(), globals::DIR);
-      let download = user
-        .download_dir()
-        .filter(|d| d.exists())
-        .map_or(fallback, |d| d.to_string_lossy().into_owned());
-
-      if Path::new(&download).exists() {
-        Ok(download)
-      } else {
-        Err(AnyError::DownloadDirNotFound)
-      }
+      resolve_from_dir(user.download_dir(), user.home_dir())
     },
     2 => {
       let path = Path::new(args.get(1).ok_or(AnyError::DownloadDirNotFound)?);
@@ -34,27 +24,87 @@ pub fn get_download_dir(args: &[&str]) -> Result<String, AnyError> {
   }
 }
 
+/// Resolve the download directory, preferring the OS-provided one when it
+/// exists and falling back to `<home>/Downloads`.
+///
+/// Split out from [`get_download_dir`] so it can be tested deterministically
+/// without depending on the real user's home/download directories.
+fn resolve_from_dir(
+  download: Option<&Path>,
+  home: &Path,
+) -> Result<String, AnyError> {
+  let fallback = home.join(globals::DIR);
+  let download = download
+    .filter(|d| d.exists())
+    .map_or_else(|| fallback.clone(), Path::to_path_buf);
+
+  if download.exists() {
+    Ok(download.to_string_lossy().into_owned())
+  } else {
+    Err(AnyError::DownloadDirNotFound)
+  }
+}
+
 #[cfg(test)]
 mod test {
   #![allow(clippy::expect_used, clippy::unwrap_used, clippy::indexing_slicing)]
   use super::*;
+  use crate::test_utils::TempDir;
 
   #[test]
-  fn without_arguments() {
-    let args = vec![""];
-    match get_download_dir(&args) {
-      Ok(dir) => assert!(dir.contains("Downloads")),
-      Err(_) => {},
-    }
+  fn no_arguments_prefers_existing_download_dir() {
+    let home = TempDir::new("home");
+    let dl = home.path().join("Downloads");
+    std::fs::create_dir(&dl).expect("create fake Downloads");
+
+    let dir = resolve_from_dir(Some(&dl), home.path()).expect("should resolve");
+    assert!(Path::new(&dir).exists());
+    assert!(dir.ends_with("Downloads"));
   }
 
   #[test]
-  fn with_one_argument() {
-    let args = vec!["", "Downloads"];
-    match get_download_dir(&args) {
-      Ok(dir) => assert!(dir.contains("Downloads")),
-      Err(_) => {},
-    }
+  fn no_arguments_falls_back_to_home_downloads() {
+    let home = TempDir::new("home2");
+    let dl = home.path().join("Downloads");
+    std::fs::create_dir(&dl).expect("create fake Downloads");
+
+    // OS-provided dir does not exist -> fall back to <home>/Downloads.
+    let missing = home.path().join("nope");
+    let dir =
+      resolve_from_dir(Some(&missing), home.path()).expect("should fallback");
+    assert_eq!(Path::new(&dir), dl.as_path());
+  }
+
+  #[test]
+  fn no_arguments_errors_when_download_missing() {
+    let home = TempDir::new("home3");
+    // No Downloads dir anywhere.
+    assert!(
+      matches!(
+        resolve_from_dir(None, home.path()),
+        Err(AnyError::DownloadDirNotFound)
+      ),
+      "expected DownloadDirNotFound"
+    );
+  }
+
+  #[test]
+  fn with_one_argument_canonicalizes() {
+    let temp = TempDir::new("canon");
+    let arg = temp.path().to_str().expect("temp path is utf-8");
+    let args = vec!["", arg];
+    let dir =
+      get_download_dir(&args).expect("should canonicalize existing dir");
+    assert_eq!(Path::new(&dir), temp.path());
+  }
+
+  #[test]
+  fn with_one_argument_errors_on_missing_path() {
+    let args = vec!["", "./definitely-not-a-real-dir-xyz"];
+    assert!(matches!(
+      get_download_dir(&args),
+      Err(AnyError::InvalidPath { .. })
+    ));
   }
 
   #[test]

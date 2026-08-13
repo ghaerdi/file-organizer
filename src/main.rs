@@ -4,6 +4,9 @@ mod error;
 mod globals;
 mod utils;
 
+#[cfg(test)]
+mod test_utils;
+
 fn main() -> anyhow::Result<()> {
   let args: Vec<String> = env::args().collect();
   let args: Vec<&str> = args.iter().map(String::as_str).collect();

@@ -23,24 +23,21 @@ pub fn create_dirs(dir: &str) -> Result<(), AnyError> {
 mod test {
   #![allow(clippy::expect_used, clippy::unwrap_used, clippy::indexing_slicing)]
   use super::*;
-  use std::fs;
-  use std::path::Path;
+  use crate::test_utils::TempDir;
 
-  // create a dir and then call the create_dirs function, check if exist each directory and then
-  // remove all the dirs.
+  // create a temp dir, then call create_dirs, assert each subdirectory exists, and let
+  // the TempDir guard remove everything on drop.
   #[test]
   fn create_directories() {
-    let main_dir = "./create_dirs";
-    fs::create_dir(&main_dir).expect("unable to create");
-    create_dirs(&main_dir).expect("unable to create subdirectories");
+    let temp = TempDir::new("create_dirs");
+    let main_dir = temp.path().to_str().expect("temp path is utf-8");
+    create_dirs(main_dir).expect("unable to create subdirectories");
 
-    assert!(Path::new("./create_dirs/Text").exists());
-    assert!(Path::new("./create_dirs/Image").exists());
-    assert!(Path::new("./create_dirs/Audio").exists());
-    assert!(Path::new("./create_dirs/Video").exists());
-    assert!(Path::new("./create_dirs/Compressed").exists());
-    assert!(Path::new("./create_dirs/Executable").exists());
-
-    fs::remove_dir_all("./create_dirs").expect("unable to remove");
+    assert!(temp.path().join("Text").exists());
+    assert!(temp.path().join("Image").exists());
+    assert!(temp.path().join("Audio").exists());
+    assert!(temp.path().join("Video").exists());
+    assert!(temp.path().join("Compressed").exists());
+    assert!(temp.path().join("Executable").exists());
   }
 }
