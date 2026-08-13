@@ -104,11 +104,11 @@ mod test {
       "foo.bar",
       "foo_noext",
     ];
-
     create_files(dir, &files);
+
     organize(dir, false, false).expect("unable to organize");
 
-    let expect = vec![
+    let mut expect = vec![
       "Text/foo.txt",
       "Image/foo.png",
       "Audio/foo.mp3",
@@ -116,8 +116,15 @@ mod test {
       "Compressed/foo.zip",
       "Executable/foo.exe",
       "Other/foo.bar",
-      "Other/foo_noext",
     ];
+    #[cfg(unix)]
+    expect.push("Other/foo_noext");
+    // On Windows, extension-less files are left untouched (see organize()),
+    // so `foo_noext` stays at the root; assert that instead.
+    #[cfg(windows)]
+    {
+      assert!(Path::new(&format!("{dir}/foo_noext")).exists());
+    }
     assert_all(dir, expect);
   }
 

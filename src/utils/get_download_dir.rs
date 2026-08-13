@@ -95,7 +95,11 @@ mod test {
     let args = vec!["", arg];
     let dir =
       get_download_dir(&args).expect("should canonicalize existing dir");
-    assert_eq!(Path::new(&dir), temp.path());
+    // Compare against the canonicalized temp path: `fs::canonicalize` returns
+    // a verbatim `\\?\...` path on Windows (and an absolute path on Unix), so
+    // canonicalizing the expectation makes the equality check platform-stable.
+    let expected = temp.path().canonicalize().expect("canonicalize temp");
+    assert_eq!(Path::new(&dir), expected);
   }
 
   #[test]
