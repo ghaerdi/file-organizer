@@ -38,7 +38,7 @@ mod test {
     let main_dir = temp.path().to_str().expect("temp path is utf-8");
     let created =
       create_dirs(main_dir).expect("unable to create subdirectories");
-    assert_eq!(created, 7, "seven category dirs created on first call");
+    assert_eq!(created, 11, "eleven category dirs created on first call");
     // Second call creates nothing.
     let again = create_dirs(main_dir).expect("idempotent");
     assert_eq!(again, 0, "no dirs created on second call");
@@ -49,5 +49,10 @@ mod test {
     assert!(temp.path().join("Video").exists());
     assert!(temp.path().join("Compressed").exists());
     assert!(temp.path().join("Executable").exists());
+    assert!(temp.path().join("Code").exists());
+    assert!(temp.path().join("Data").exists());
+    assert!(temp.path().join("Disk").exists());
+    assert!(temp.path().join("Font").exists());
+    assert!(temp.path().join("Other").exists());
   }
 }

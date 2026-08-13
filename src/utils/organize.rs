@@ -222,8 +222,8 @@ mod test {
     let summary = organize(dir, false, false).expect("organize succeeds");
     assert_eq!(summary.moved, 3, "three files moved");
     assert_eq!(
-      summary.skipped, 7,
-      "seven category dirs are skipped as untouched"
+      summary.skipped, 11,
+      "eleven category dirs are skipped as untouched"
     );
   }
 
@@ -256,7 +256,7 @@ mod test {
       "symlink stays in place and remains a symlink"
     );
     // Category dirs + the symlink are the skipped entries.
-    assert_eq!(summary.skipped, 8, "seven dirs + one symlink skipped");
+    assert_eq!(summary.skipped, 12, "eleven dirs + one symlink skipped");
   }
 
   fn create_files(dir: &str, files: &[&str]) {

@@ -1,6 +1,6 @@
 use crate::globals::{
-  AUDIO_EXT, COMPRESSED_EXT, DIRS, EXECUTABLE_EXT, IMAGE_EXT, TEXT_EXT,
-  VIDEO_EXT,
+  AUDIO_EXT, CODE_CONFIG_EXT, CODE_EXT, COMPRESSED_EXT, DATA_EXT, DIRS,
+  DISK_EXT, EXECUTABLE_EXT, FONT_EXT, IMAGE_EXT, TEXT_EXT, VIDEO_EXT,
 };
 use std::collections::HashMap;
 
@@ -13,7 +13,11 @@ pub fn files_extension() -> HashMap<&'static str, &'static str> {
   to_map(&mut map, &AUDIO_EXT, DIRS[3]);
   to_map(&mut map, &COMPRESSED_EXT, DIRS[4]);
   to_map(&mut map, &EXECUTABLE_EXT, DIRS[5]);
-
+  to_map(&mut map, &CODE_EXT, DIRS[6]);
+  to_map(&mut map, &CODE_CONFIG_EXT, DIRS[6]);
+  to_map(&mut map, &DATA_EXT, DIRS[7]);
+  to_map(&mut map, &DISK_EXT, DIRS[8]);
+  to_map(&mut map, &FONT_EXT, DIRS[9]);
   map
 }
 
@@ -54,5 +58,13 @@ mod test {
     assert_eq!(map.get("mp4"), Some(&"Video"));
     assert_eq!(map.get("rar"), Some(&"Compressed"));
     assert_eq!(map.get("exe"), Some(&"Executable"));
+    assert_eq!(map.get("rs"), Some(&"Code"));
+    assert_eq!(map.get("toml"), Some(&"Code"));
+    assert_eq!(map.get("csv"), Some(&"Data"));
+    assert_eq!(map.get("xlsx"), Some(&"Data"));
+    assert_eq!(map.get("iso"), Some(&"Disk"));
+    assert_eq!(map.get("dmg"), Some(&"Disk"));
+    assert_eq!(map.get("ttf"), Some(&"Font"));
+    assert_eq!(map.get("woff2"), Some(&"Font"));
   }
 }
