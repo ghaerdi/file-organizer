@@ -3,9 +3,12 @@ pub struct Args {
   /// Whether `--dry-run` was passed. When true, organisation is previewed and
   /// no filesystem writes are performed.
   pub dry_run: bool,
+  /// Whether `--by-date` was passed. When true, files are moved into
+  /// year/month subfolders (e.g. `Text/2024/08/`) inside their category.
+  pub by_date: bool,
   /// Flag-free positional arguments (program name first, then any directory
   /// path the user supplied). Same shape as the raw `env::args` slice with
-  /// `--dry-run` occurrences removed.
+  /// flags removed.
   pub rest: Vec<String>,
 }
 
@@ -13,17 +16,21 @@ pub struct Args {
 /// returning the remaining argument slice untouched.
 pub fn parse_args(args: &[&str]) -> Args {
   let mut dry_run = false;
+  let mut by_date = false;
   let mut rest = Vec::with_capacity(args.len());
 
   for arg in args {
-    if *arg == "--dry-run" {
-      dry_run = true;
-    } else {
-      rest.push((*arg).to_string());
+    match *arg {
+      "--dry-run" => dry_run = true,
+      "--by-date" => by_date = true,
+      _ => rest.push((*arg).to_string()),
     }
   }
-
-  Args { dry_run, rest }
+  Args {
+    dry_run,
+    by_date,
+    rest,
+  }
 }
 
 #[cfg(test)]
@@ -73,6 +80,26 @@ mod test {
     assert_eq!(
       parsed.rest,
       vec!["organizer".to_string(), "--verbose".to_string()]
+    );
+  }
+
+  #[test]
+  fn by_date_flag_set_when_present() {
+    let parsed = parse_args(&["organizer", "--by-date"]);
+    assert!(parsed.by_date, "by_date should be true");
+    assert!(!parsed.dry_run);
+    assert_eq!(parsed.rest, vec!["organizer".to_string()]);
+  }
+
+  #[test]
+  fn by_date_and_dry_run_compose() {
+    let parsed =
+      parse_args(&["organizer", "~/Download", "--dry-run", "--by-date"]);
+    assert!(parsed.dry_run);
+    assert!(parsed.by_date);
+    assert_eq!(
+      parsed.rest,
+      vec!["organizer".to_string(), "~/Download".to_string()]
     );
   }
 }

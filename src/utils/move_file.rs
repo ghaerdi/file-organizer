@@ -8,14 +8,28 @@ use std::path::Path;
 ///
 /// When `dry_run` is true, the destination is computed and printed but nothing
 /// is renamed, so the caller can preview what would happen.
-pub fn move_file(from: &Path, to: &str, dry_run: bool) -> Result<(), AnyError> {
+pub fn move_file(
+  from: &Path,
+  to: &str,
+  dry_run: bool,
+  by_date: bool,
+) -> Result<(), AnyError> {
   let file_name =
     from.file_name().and_then(|n| n.to_str()).ok_or_else(|| {
       AnyError::FileName {
         path: from.to_path_buf(),
       }
     })?;
-  let dest = unique_dest(to, file_name);
+  let target_dir = date_target(to, from, by_date)?;
+  // By-date moves create the year/month nesting; flat moves require the
+  // category directory to already exist (as create_dirs guarantees).
+  if by_date && !dry_run {
+    fs::create_dir_all(&target_dir).map_err(|source| AnyError::CreateDir {
+      name: target_dir.clone(),
+      source,
+    })?;
+  }
+  let dest = unique_dest(&target_dir, file_name);
 
   if dry_run {
     println!("would move to");
@@ -64,6 +78,34 @@ fn unique_dest(dir: &str, file_name: &str) -> String {
   String::new()
 }
 
+/// Resolve the directory that a file should land in. When `by_date` is true,
+/// this appends the file's modification year and month (`{to}/{year}/{month:02}`)
+/// so files are grouped chronologically inside their category. Otherwise the
+/// category directory `to` is returned unchanged.
+fn date_target(
+  to: &str,
+  from: &Path,
+  by_date: bool,
+) -> Result<String, AnyError> {
+  if !by_date {
+    return Ok(to.to_string());
+  }
+  let metadata =
+    fs::metadata(from).map_err(|source| AnyError::GetMetadata {
+      path: from.to_path_buf(),
+      source,
+    })?;
+  let modified =
+    metadata
+      .modified()
+      .map_err(|source| AnyError::GetMetadata {
+        path: from.to_path_buf(),
+        source,
+      })?;
+  let ts: chrono::DateTime<chrono::Utc> = modified.into();
+  Ok(format!("{to}/{}/{:02}", ts.format("%Y"), ts.format("%m")))
+}
+
 #[cfg(test)]
 mod test {
   #![allow(clippy::expect_used, clippy::unwrap_used, clippy::indexing_slicing)]
@@ -80,7 +122,7 @@ mod test {
     let dst_dir = temp.path().join("dst");
     fs::create_dir(&dst_dir).expect("create target dir");
 
-    move_file(&src, dst_dir.to_str().expect("utf-8"), false)
+    move_file(&src, dst_dir.to_str().expect("utf-8"), false, false)
       .expect("move should succeed");
 
     let moved = dst_dir.join("a.txt");
@@ -95,7 +137,7 @@ mod test {
     File::create(&src).expect("create source file");
 
     let missing = temp.path().join("does_not_exist");
-    let err = move_file(&src, missing.to_str().expect("utf-8"), false)
+    let err = move_file(&src, missing.to_str().expect("utf-8"), false, false)
       .expect_err("moving into nonexistent dir must fail");
     assert!(matches!(err, AnyError::MoveFile { .. }));
     // Source untouched.
@@ -111,7 +153,7 @@ mod test {
     let dst_dir = temp.path().join("dst");
     fs::create_dir(&dst_dir).expect("create target dir");
 
-    move_file(&src, dst_dir.to_str().expect("utf-8"), true)
+    move_file(&src, dst_dir.to_str().expect("utf-8"), true, false)
       .expect("dry run should succeed");
 
     // Nothing moved.
@@ -140,7 +182,7 @@ mod test {
     let src = temp.path().join("a.txt");
     fs::write(&src, "new").expect("create source file");
 
-    move_file(&src, dst_dir.to_str().expect("utf-8"), false)
+    move_file(&src, dst_dir.to_str().expect("utf-8"), false, false)
       .expect("move should succeed");
 
     // Original preserved.
@@ -178,11 +220,13 @@ mod test {
 
     let src = temp.path().join("a.txt");
     fs::write(&src, "copy1").expect("create source");
-    move_file(&src, dst_dir.to_str().expect("utf-8"), false).expect("move 1");
+    move_file(&src, dst_dir.to_str().expect("utf-8"), false, false)
+      .expect("move 1");
 
     let src2 = temp.path().join("a.txt");
     fs::write(&src2, "copy2").expect("create source 2");
-    move_file(&src2, dst_dir.to_str().expect("utf-8"), false).expect("move 2");
+    move_file(&src2, dst_dir.to_str().expect("utf-8"), false, false)
+      .expect("move 2");
 
     // Original never touched across both collisions.
     assert_eq!(
@@ -195,5 +239,60 @@ mod test {
       .map(|e| e.expect("entry").file_name().into_string().expect("name"))
       .collect();
     assert_eq!(names.len(), 3, "original + 2 copies: {names:?}");
+  }
+
+  #[test]
+  fn date_target_flat_when_not_by_date() {
+    let temp = TempDir::new("date_flat");
+    let src = temp.path().join("a.txt");
+    fs::write(&src, "x").expect("create source");
+
+    let result = date_target("/cats", &src, false).expect("no date grouping");
+    assert_eq!(result, "/cats", "by_date=false keeps category dir flat");
+  }
+
+  #[test]
+  fn date_target_appends_year_and_month_when_by_date() {
+    let temp = TempDir::new("date_group");
+    let src = temp.path().join("a.txt");
+    fs::write(&src, "x").expect("create source");
+
+    let result = date_target("/cats", &src, true).expect("date grouping");
+    let pieces: Vec<&str> = result.split('/').collect();
+    // [""]/cats/<year>/<month>
+    assert_eq!(pieces.len(), 4, "category + year + month: {result:?}");
+    assert_eq!(pieces[1], "cats");
+    let year: u32 = pieces[2].parse().expect("year is numeric");
+    assert_eq!(pieces[3].len(), 2, "month zero-padded to 2 digits");
+    let month: u32 = pieces[3].parse().expect("month is numeric");
+    assert!((1900..=9999).contains(&year), "year in plausible range");
+    assert!((1..=12).contains(&month), "month in plausible range");
+  }
+
+  #[test]
+  fn by_date_move_lands_inside_nested_year_month_dir() {
+    let temp = TempDir::new("move_date");
+    let src = temp.path().join("a.txt");
+    fs::write(&src, "content").expect("create source");
+
+    let dst_dir = temp.path().join("docs");
+    let expected_parent =
+      date_target(dst_dir.to_str().expect("utf-8"), &src, true)
+        .expect("compute target");
+
+    move_file(&src, dst_dir.to_str().expect("utf-8"), false, true)
+      .expect("date move succeeds");
+
+    assert!(
+      !src.exists(),
+      "source moved out during by-date organization"
+    );
+    let expect = format!("{expected_parent}/a.txt");
+    assert!(Path::new(&expect).exists(), "file landed at: {}", &expect);
+    assert_eq!(
+      fs::read_to_string(&expect).expect("read moved file"),
+      "content",
+      "content preserved after date move"
+    );
   }
 }
