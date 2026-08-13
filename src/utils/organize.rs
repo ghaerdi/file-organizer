@@ -3,15 +3,29 @@ use crate::{globals, utils};
 use std::env::consts;
 use std::fs;
 
+/// Aggregate result of an [`organize`] pass.
+pub struct OrganizeSummary {
+  /// Number of files actually moved (or previewed for move when dry-running).
+  pub moved: usize,
+  /// Number of entries left untouched (symlinks, category dirs, no-extension
+  /// files on Windows).
+  pub skipped: usize,
+}
+
 pub fn organize(
   path: &str,
   dry_run: bool,
   by_date: bool,
-) -> Result<(), AnyError> {
+) -> Result<OrganizeSummary, AnyError> {
   let main_dir = fs::read_dir(path).map_err(AnyError::OpenDir)?;
   let map = utils::files_extension();
   let dirs = globals::DIRS.to_vec();
   let other = globals::DIRS.last().ok_or(AnyError::NoOtherCategory)?;
+
+  let mut summary = OrganizeSummary {
+    moved: 0,
+    skipped: 0,
+  };
 
   for entry in main_dir {
     let entry = entry.map_err(AnyError::ReadEntry)?.path();
@@ -22,24 +36,34 @@ pub fn organize(
     })?;
 
     if dirs.contains(&name) {
+      summary.skipped = summary.skipped.saturating_add(1);
       continue;
     }
 
-    match entry.extension().and_then(|e| e.to_str()) {
-      Some(ext) => {
-        let dir = map
-          .get(ext)
-          .map_or_else(|| format!("{path}/{other}"), |d| format!("{path}/{d}"));
-        utils::move_file(&entry, &dir, dry_run, by_date)?;
-      },
-      None if consts::OS != "windows" => {
-        let dir = format!("{path}/{other}");
-        utils::move_file(&entry, &dir, dry_run, by_date)?;
-      },
-      None => {},
+    // Never follow symlinks: a link could point outside the tree (or dangle),
+    // and moving it would silently relocate an external file, so leave it alone.
+    let is_symlink =
+      fs::symlink_metadata(&entry).is_ok_and(|m| m.file_type().is_symlink());
+    if is_symlink {
+      summary.skipped = summary.skipped.saturating_add(1);
+      continue;
     }
+
+    let destination = match entry.extension().and_then(|e| e.to_str()) {
+      Some(ext) => map
+        .get(ext)
+        .map_or_else(|| format!("{path}/{other}"), |d| format!("{path}/{d}")),
+      None if consts::OS != "windows" => format!("{path}/{other}"),
+      None => {
+        summary.skipped = summary.skipped.saturating_add(1);
+        continue;
+      },
+    };
+
+    utils::move_file(&entry, &destination, dry_run, by_date)?;
+    summary.moved = summary.moved.saturating_add(1);
   }
-  Ok(())
+  Ok(summary)
 }
 
 #[cfg(test)]
@@ -173,6 +197,53 @@ mod test {
     create_files(dir, &["a.txt", "b.png"]);
 
     organize(dir, true, true).expect("dry run with by-date succeeds");
+  }
+
+  #[test]
+  fn organize_summary_counts_moved_files() {
+    let temp = TempDir::new("organize_summary");
+    let dir = temp.path().to_str().expect("temp path is utf-8");
+    utils::create_dirs(dir).expect("unable to create subdirectories");
+    create_files(dir, &["a.txt", "b.png", "c.zip"]);
+
+    let summary = organize(dir, false, false).expect("organize succeeds");
+    assert_eq!(summary.moved, 3, "three files moved");
+    assert_eq!(
+      summary.skipped, 7,
+      "seven category dirs are skipped as untouched"
+    );
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn organize_skips_symlinks_and_counts_them() {
+    use std::os::unix::fs::symlink;
+
+    let temp = TempDir::new("organize_symlink");
+    let dir_path = temp.path().join("org");
+    fs::create_dir(&dir_path).expect("create org dir");
+    let dir = dir_path.to_str().expect("temp path is utf-8");
+    utils::create_dirs(dir).expect("unable to create subdirectories");
+
+    // Target sits OUTSIDE the organized folder so the link is the only `.txt`
+    // entry inside it.
+    let target = temp.path().join("outside.txt");
+    fs::write(&target, "keep me").expect("write target");
+    let link = dir_path.join("link.txt");
+    symlink(&target, &link).expect("create symlink");
+    let summary = organize(dir, false, false).expect("organize succeeds");
+    assert_eq!(summary.moved, 0, "no real file moved");
+    // The symlink must not be relocated.
+    assert!(
+      link.exists()
+        && fs::symlink_metadata(&link)
+          .expect("stat link")
+          .file_type()
+          .is_symlink(),
+      "symlink stays in place and remains a symlink"
+    );
+    // Category dirs + the symlink are the skipped entries.
+    assert_eq!(summary.skipped, 8, "seven dirs + one symlink skipped");
   }
 
   fn create_files(dir: &str, files: &[&str]) {
