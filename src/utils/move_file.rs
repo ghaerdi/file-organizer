@@ -6,14 +6,15 @@ use std::path::Path;
 /// collides with an existing file (in which case a numeric suffix is added so
 /// nothing is ever overwritten).
 ///
-/// When `dry_run` is true, the destination is computed and printed but nothing
-/// is renamed, so the caller can preview what would happen.
+/// Returns the fully resolved destination path. When `dry_run` is true, the
+/// file is not renamed but the destination it WOULD land at is still returned,
+/// so the caller can preview without touching disk.
 pub fn move_file(
   from: &Path,
   to: &str,
   dry_run: bool,
   by_date: bool,
-) -> Result<(), AnyError> {
+) -> Result<String, AnyError> {
   let file_name =
     from.file_name().and_then(|n| n.to_str()).ok_or_else(|| {
       AnyError::FileName {
@@ -31,21 +32,13 @@ pub fn move_file(
   }
   let dest = unique_dest(&target_dir, file_name);
 
-  if dry_run {
-    println!("would move to");
-    println!("{dest}");
-    println!();
-    return Ok(());
+  if !dry_run {
+    fs::rename(from, &dest).map_err(|source| AnyError::MoveFile {
+      to: dest.clone(),
+      source,
+    })?;
   }
-
-  fs::rename(from, &dest).map_err(|source| AnyError::MoveFile {
-    to: dest.clone(),
-    source,
-  })?;
-  println!("moved to");
-  println!("{dest}");
-  println!();
-  Ok(())
+  Ok(dest)
 }
 
 /// Build a destination path `{dir}/{file_name}` that does not collide with an

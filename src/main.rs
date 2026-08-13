@@ -16,24 +16,44 @@ fn main() -> anyhow::Result<()> {
   let by_date = parsed.by_date;
 
   if parsed.dry_run {
-    println!("[dry-run] previewing organization of {dir}");
+    println!("[dry-run] Previewing organization of {dir}");
     let s = utils::organize(&dir, true, by_date)?;
-    print_summary(&s);
+    print_summary(true, &s);
     return Ok(());
   }
 
   utils::set_write_permissions(&dir)?;
-  utils::create_dirs(&dir)?;
+  let created = utils::create_dirs(&dir)?;
+  if created != 0 {
+    println!(
+      "created {} categor{}",
+      created,
+      if created == 1 { "y" } else { "ies" }
+    );
+  }
+  println!("Organizing {dir}");
   let s = utils::organize(&dir, false, by_date)?;
-  print_summary(&s);
+  print_summary(false, &s);
 
   Ok(())
 }
 
-fn print_summary(s: &utils::OrganizeSummary) {
+fn print_summary(dry_run: bool, s: &utils::OrganizeSummary) {
+  let files = noun(s.moved, "file", "files");
+  let entries = noun(s.skipped, "entry", "entries");
   println!();
-  println!(
-    "moved {} file(s), skipped {} entr(y/ies)",
-    s.moved, s.skipped
-  );
+  if dry_run {
+    println!("✓ dry run — would organize {files}, skip {entries}.");
+  } else {
+    println!("✓ done — organized {files}, skipped {entries}.");
+  }
+}
+
+/// Return `count` + noun with correct pluralisation (`1 file`, `2 files`).
+fn noun(count: usize, singular: &str, plural: &str) -> String {
+  if count == 1 {
+    format!("{count} {singular}")
+  } else {
+    format!("{count} {plural}")
+  }
 }

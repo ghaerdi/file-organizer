@@ -3,7 +3,12 @@ use crate::globals;
 use std::fs;
 use std::path::Path;
 
-pub fn create_dirs(dir: &str) -> Result<(), AnyError> {
+/// Ensure each category directory exists.
+///
+/// Returns how many directories were newly created (0 when every category
+/// already exists), so callers can report it once rather than per-directory.
+pub fn create_dirs(dir: &str) -> Result<usize, AnyError> {
+  let mut created: usize = 0;
   for value in globals::DIRS {
     let subdir = format!("{dir}/{value}");
     let path = Path::new(&subdir);
@@ -13,10 +18,10 @@ pub fn create_dirs(dir: &str) -> Result<(), AnyError> {
         name: String::from(value),
         source,
       })?;
-      println!("{value} directory created");
+      created = created.saturating_add(1);
     }
   }
-  Ok(())
+  Ok(created)
 }
 
 #[cfg(test)]
@@ -31,7 +36,12 @@ mod test {
   fn create_directories() {
     let temp = TempDir::new("create_dirs");
     let main_dir = temp.path().to_str().expect("temp path is utf-8");
-    create_dirs(main_dir).expect("unable to create subdirectories");
+    let created =
+      create_dirs(main_dir).expect("unable to create subdirectories");
+    assert_eq!(created, 7, "seven category dirs created on first call");
+    // Second call creates nothing.
+    let again = create_dirs(main_dir).expect("idempotent");
+    assert_eq!(again, 0, "no dirs created on second call");
 
     assert!(temp.path().join("Text").exists());
     assert!(temp.path().join("Image").exists());

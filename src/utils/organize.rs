@@ -59,11 +59,24 @@ pub fn organize(
         continue;
       },
     };
-
-    utils::move_file(&entry, &destination, dry_run, by_date)?;
+    let dest = utils::move_file(&entry, &destination, dry_run, by_date)?;
     summary.moved = summary.moved.saturating_add(1);
+    let rel = relative_to(dest.as_str(), path);
+    if dry_run {
+      println!("→ {rel} (dry run)");
+    } else {
+      println!("→ {rel}");
+    }
   }
   Ok(summary)
+}
+
+/// Strip the organize root prefix so a destination such as `/tmp/x/Text/a.txt`
+/// is rendered relative to that root as `Text/a.txt`. Falls back to the absolute
+/// path when the destination is not under the root.
+fn relative_to<'a>(dest: &'a str, root: &str) -> &'a str {
+  let prefix = format!("{root}/");
+  dest.strip_prefix(&prefix).unwrap_or(dest)
 }
 
 #[cfg(test)]
