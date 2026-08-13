@@ -22,9 +22,11 @@ pub fn move_file(
       }
     })?;
   let target_dir = date_target(to, from, by_date)?;
-  // By-date moves create the year/month nesting; flat moves require the
-  // category directory to already exist (as create_dirs guarantees).
-  if by_date && !dry_run {
+  // Ensure the destination parent directory exists. Lazy creation keeps
+  // categories that receive no files from ever being materialised on disk;
+  // by-date nesting always needs the year/month dirs, and flat moves need
+  // the category directory itself.
+  if !dry_run {
     fs::create_dir_all(&target_dir).map_err(|source| AnyError::CreateDir {
       name: target_dir.clone(),
       source,
@@ -124,17 +126,20 @@ mod test {
   }
 
   #[test]
-  fn moving_to_missing_dir_errors() {
-    let temp = TempDir::new("move_err");
+  fn move_creates_missing_parent_dir_lazily() {
+    let temp = TempDir::new("move_mkdir");
     let src = temp.path().join("a.txt");
     File::create(&src).expect("create source file");
 
-    let missing = temp.path().join("does_not_exist");
-    let err = move_file(&src, missing.to_str().expect("utf-8"), false, false)
-      .expect_err("moving into nonexistent dir must fail");
-    assert!(matches!(err, AnyError::MoveFile { .. }));
-    // Source untouched.
-    assert!(src.exists());
+    // Parent does not exist yet — the move must create it.
+    let fresh = temp.path().join("brand_new_cat");
+    move_file(&src, fresh.to_str().expect("utf-8"), false, false)
+      .expect("move creates destination dir");
+    assert!(
+      fresh.join("a.txt").exists(),
+      "file should land inside lazily created dir"
+    );
+    assert!(!src.exists(), "source file should be gone");
   }
 
   #[test]

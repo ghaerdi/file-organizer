@@ -56,4 +56,36 @@ pub enum AnyError {
     #[source]
     source: io::Error,
   },
+
+  #[error("could not determine the location of the move register")]
+  NoRegisterDir,
+
+  #[error("could not write the move register")]
+  RegisterWrite(#[source] io::Error),
+
+  #[error("could not read the move register: {0}")]
+  RegisterRead(String),
+
+  #[error("could not parse the move register")]
+  RegisterParse(String),
+
+  #[error("no run recorded for this directory to revert")]
+  NothingToRevert,
+
+  #[error("could not create the {name} directory while reverting")]
+  RevertCreateDir {
+    name: String,
+    #[source]
+    source: io::Error,
+  },
+
+  #[error("could not move the file back to {to} while reverting")]
+  RevertMoveFile {
+    to: String,
+    #[source]
+    source: io::Error,
+  },
+
+  #[error("could not remove the move register entry")]
+  RegisterPrune(#[source] io::Error),
 }

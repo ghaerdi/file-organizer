@@ -10,6 +10,13 @@ pub struct OrganizeSummary {
   /// Number of entries left untouched (symlinks, category dirs, no-extension
   /// files on Windows).
   pub skipped: usize,
+  /// Relative destination paths (e.g. `Text/a.txt` or `Text/2024/08/a.txt`)
+  /// for every file that was or would be moved, in actual move order.
+  pub destinations: Vec<String>,
+  /// Absolute source→destination pairs for every file actually moved. Empty
+  /// during a dry run (nothing moved on disk). Used to build the register that
+  /// `--revert` replays.
+  pub moves: Vec<utils::MoveRecord>,
 }
 
 pub fn organize(
@@ -25,6 +32,8 @@ pub fn organize(
   let mut summary = OrganizeSummary {
     moved: 0,
     skipped: 0,
+    destinations: Vec::new(),
+    moves: Vec::new(),
   };
 
   for entry in main_dir {
@@ -61,11 +70,14 @@ pub fn organize(
     };
     let dest = utils::move_file(&entry, &destination, dry_run, by_date)?;
     summary.moved = summary.moved.saturating_add(1);
-    let rel = relative_to(dest.as_str(), path);
-    if dry_run {
-      println!("  · Will move to {rel}");
-    } else {
-      println!("  · Moved to {rel}");
+    summary
+      .destinations
+      .push(relative_to(dest.as_str(), path).to_string());
+    if !dry_run {
+      summary.moves.push(utils::MoveRecord {
+        from: entry.to_string_lossy().into_owned(),
+        to: dest.clone(),
+      });
     }
   }
   Ok(summary)
@@ -84,7 +96,6 @@ mod test {
   #![allow(clippy::expect_used, clippy::unwrap_used, clippy::indexing_slicing)]
   use super::*;
   use crate::test_utils::TempDir;
-  use crate::utils;
   use std::fs::File;
   use std::path::Path;
 
@@ -92,8 +103,6 @@ mod test {
   fn organize_files() {
     let temp = TempDir::new("organize");
     let dir = temp.path().to_str().expect("temp path is utf-8");
-    utils::create_dirs(dir).expect("unable to create subdirectories");
-
     let files = vec![
       "foo.txt",
       "foo.png",
@@ -126,13 +135,44 @@ mod test {
       assert!(Path::new(&format!("{dir}/foo_noext")).exists());
     }
     assert_all(dir, expect);
+    // Categories that received no files must not be materialised.
+    assert!(
+      !Path::new(&format!("{dir}/Data")).exists(),
+      "Data stays empty"
+    );
+    assert!(
+      !Path::new(&format!("{dir}/Font")).exists(),
+      "Font stays empty"
+    );
+    assert!(
+      !Path::new(&format!("{dir}/Disk")).exists(),
+      "Disk stays empty"
+    );
+  }
+
+  #[test]
+  fn empty_source_creates_no_category_dirs() {
+    let temp = TempDir::new("organize_empty");
+    let dir = temp.path().to_str().expect("temp path is utf-8");
+
+    let summary = organize(dir, false, false).expect("organize empty dir");
+    assert_eq!(summary.moved, 0, "no files to move");
+    assert_eq!(summary.skipped, 0, "no dirs/symlinks to skip");
+    // No category directory should exist at all after a no-op run.
+    for dir_name in globals::DIRS {
+      assert!(
+        !Path::new(&format!("{dir}/{dir_name}")).exists(),
+        "empty category {dir_name} must not be created",
+        dir_name = dir_name
+      );
+    }
   }
 
   #[test]
   fn organize_idempotent() {
     let temp = TempDir::new("organize_idem");
     let dir = temp.path().to_str().expect("temp path is utf-8");
-    utils::create_dirs(dir).expect("unable to create subdirectories");
+    // No pre-created category dirs — organize creates them lazily.
     create_files(dir, &["a.txt", "b.png"]);
     organize(dir, false, false).expect("organize #1");
     organize(dir, false, false).expect("organize #2");
@@ -144,7 +184,6 @@ mod test {
   fn organize_dry_run_moves_nothing() {
     let temp = TempDir::new("organize_dry");
     let dir = temp.path().to_str().expect("temp path is utf-8");
-    utils::create_dirs(dir).expect("unable to create subdirectories");
     create_files(dir, &["a.txt", "b.png"]);
 
     organize(dir, true, false).expect("dry run should succeed");
@@ -167,7 +206,6 @@ mod test {
   fn organize_by_date_groups_into_year_month_subfolder() {
     let temp = TempDir::new("organize_date");
     let dir = temp.path().to_str().expect("temp path is utf-8");
-    utils::create_dirs(dir).expect("unable to create subdirectories");
     create_files(dir, &["a.txt"]);
 
     // By-date organization removes `a.txt` from the flat root...
@@ -213,7 +251,6 @@ mod test {
   fn organize_by_date_with_dry_run_moves_nothing() {
     let temp = TempDir::new("organize_date_dry");
     let dir = temp.path().to_str().expect("temp path is utf-8");
-    utils::create_dirs(dir).expect("unable to create subdirectories");
     create_files(dir, &["a.txt", "b.png"]);
 
     organize(dir, true, true).expect("dry run with by-date succeeds");
@@ -223,14 +260,19 @@ mod test {
   fn organize_summary_counts_moved_files() {
     let temp = TempDir::new("organize_summary");
     let dir = temp.path().to_str().expect("temp path is utf-8");
-    utils::create_dirs(dir).expect("unable to create subdirectories");
     create_files(dir, &["a.txt", "b.png", "c.zip"]);
 
     let summary = organize(dir, false, false).expect("organize succeeds");
     assert_eq!(summary.moved, 3, "three files moved");
+    assert_eq!(summary.skipped, 0, "no pre-existing dirs to skip");
     assert_eq!(
-      summary.skipped, 11,
-      "eleven category dirs are skipped as untouched"
+      summary.destinations,
+      vec![
+        "Text/a.txt".to_string(),
+        "Image/b.png".to_string(),
+        "Compressed/c.zip".to_string(),
+      ],
+      "destinations captured in move order"
     );
   }
 
@@ -243,7 +285,6 @@ mod test {
     let dir_path = temp.path().join("org");
     fs::create_dir(&dir_path).expect("create org dir");
     let dir = dir_path.to_str().expect("temp path is utf-8");
-    utils::create_dirs(dir).expect("unable to create subdirectories");
 
     // Target sits OUTSIDE the organized folder so the link is the only `.txt`
     // entry inside it.
@@ -262,8 +303,8 @@ mod test {
           .is_symlink(),
       "symlink stays in place and remains a symlink"
     );
-    // Category dirs + the symlink are the skipped entries.
-    assert_eq!(summary.skipped, 12, "eleven dirs + one symlink skipped");
+    // Only the symlink is skipped (no pre-created category dirs).
+    assert_eq!(summary.skipped, 1, "one symlink skipped");
   }
 
   fn create_files(dir: &str, files: &[&str]) {

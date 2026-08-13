@@ -6,6 +6,10 @@ pub struct Args {
   /// Whether `--by-date` was passed. When true, files are moved into
   /// year/month subfolders (e.g. `Text/2024/08/`) inside their category.
   pub by_date: bool,
+  /// Whether `--revert` was passed. When true, the most recent organize run on
+  /// the target directory is undone (each file is moved back where it came
+  /// from) instead of organizing.
+  pub revert: bool,
   /// Flag-free positional arguments (program name first, then any directory
   /// path the user supplied). Same shape as the raw `env::args` slice with
   /// flags removed.
@@ -17,18 +21,21 @@ pub struct Args {
 pub fn parse_args(args: &[&str]) -> Args {
   let mut dry_run = false;
   let mut by_date = false;
+  let mut revert = false;
   let mut rest = Vec::with_capacity(args.len());
 
   for arg in args {
     match *arg {
       "--dry-run" => dry_run = true,
       "--by-date" => by_date = true,
+      "--revert" => revert = true,
       _ => rest.push((*arg).to_string()),
     }
   }
   Args {
     dry_run,
     by_date,
+    revert,
     rest,
   }
 }
@@ -100,6 +107,26 @@ mod test {
     assert_eq!(
       parsed.rest,
       vec!["organizer".to_string(), "~/Download".to_string()]
+    );
+  }
+
+  #[test]
+  fn revert_flag_set_when_present() {
+    let parsed = parse_args(&["organizer", "--revert"]);
+    assert!(parsed.revert, "revert should be true");
+    assert!(!parsed.dry_run);
+    assert_eq!(parsed.rest, vec!["organizer".to_string()]);
+  }
+
+  #[test]
+  fn revert_ignores_other_flags() {
+    let parsed =
+      parse_args(&["organizer", "--revert", "--by-date", "~/Downloads"]);
+    assert!(parsed.revert);
+    assert!(parsed.by_date);
+    assert_eq!(
+      parsed.rest,
+      vec!["organizer".to_string(), "~/Downloads".to_string()]
     );
   }
 }
