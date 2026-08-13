@@ -16,7 +16,7 @@ fn main() -> anyhow::Result<()> {
   let by_date = parsed.by_date;
 
   if parsed.dry_run {
-    println!("[dry-run] Previewing organization of {dir}");
+    println!("Dry run — previewing how {dir} would be organized.");
     let s = utils::organize(&dir, true, by_date)?;
     print_summary(true, &s);
     return Ok(());
@@ -26,12 +26,11 @@ fn main() -> anyhow::Result<()> {
   let created = utils::create_dirs(&dir)?;
   if created != 0 {
     println!(
-      "created {} categor{}",
-      created,
-      if created == 1 { "y" } else { "ies" }
+      "{} created",
+      noun(created, "Category directory", "Category directories")
     );
   }
-  println!("Organizing {dir}");
+  println!("Organizing {dir}.");
   let s = utils::organize(&dir, false, by_date)?;
   print_summary(false, &s);
 
@@ -43,9 +42,9 @@ fn print_summary(dry_run: bool, s: &utils::OrganizeSummary) {
   let entries = noun(s.skipped, "entry", "entries");
   println!();
   if dry_run {
-    println!("✓ dry run — would organize {files}, skip {entries}.");
+    println!("Dry run — would move {files} and leave {entries} untouched.");
   } else {
-    println!("✓ done — organized {files}, skipped {entries}.");
+    println!("Done — moved {files} and left {entries} untouched.");
   }
 }
 

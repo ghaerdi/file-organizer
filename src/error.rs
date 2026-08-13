@@ -4,53 +4,53 @@ use std::path::PathBuf;
 /// Errors that can occur while organizing a directory.
 #[derive(Debug, thiserror::Error)]
 pub enum AnyError {
-  #[error("unable to open directory")]
+  #[error("could not open the target directory")]
   OpenDir(#[source] io::Error),
 
-  #[error("unable to read directory entry")]
+  #[error("could not read an entry in the target directory")]
   ReadEntry(#[source] io::Error),
 
-  #[error("unable to get metadata for {path}")]
+  #[error("could not read the metadata of {path}")]
   GetMetadata {
     path: PathBuf,
     #[source]
     source: io::Error,
   },
 
-  #[error("unable to set permissions on {path}")]
+  #[error("could not change the permissions of {path}")]
   SetPermissions {
     path: PathBuf,
     #[source]
     source: io::Error,
   },
 
-  #[error("unable to move file to {to}")]
+  #[error("could not move the file to {to}")]
   MoveFile {
     to: String,
     #[source]
     source: io::Error,
   },
 
-  #[error("unable to determine file name for {path}")]
+  #[error("could not determine the file name of {path}")]
   FileName { path: PathBuf },
 
-  #[error("unable to create {name} directory")]
+  #[error("could not create the {name} directory")]
   CreateDir {
     name: String,
     #[source]
     source: io::Error,
   },
 
-  #[error("no Other category configured")]
+  #[error("no Other category is configured")]
   NoOtherCategory,
 
-  #[error("Downloads directory not found")]
+  #[error("the Downloads directory could not be found")]
   DownloadDirNotFound,
 
-  #[error("too many arguments")]
+  #[error("too many arguments were provided")]
   TooManyArguments,
 
-  #[error("unable to resolve path {path}")]
+  #[error("could not resolve the path {path}")]
   InvalidPath {
     path: PathBuf,
     #[source]

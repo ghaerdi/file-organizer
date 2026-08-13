@@ -63,9 +63,9 @@ pub fn organize(
     summary.moved = summary.moved.saturating_add(1);
     let rel = relative_to(dest.as_str(), path);
     if dry_run {
-      println!("→ {rel} (dry run)");
+      println!("  · Will move to {rel}");
     } else {
-      println!("→ {rel}");
+      println!("  · Moved to {rel}");
     }
   }
   Ok(summary)
