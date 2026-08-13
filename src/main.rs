@@ -1,4 +1,5 @@
-use std::env;
+use clap::Parser;
+use std::path::PathBuf;
 
 mod error;
 mod globals;
@@ -7,15 +8,33 @@ mod utils;
 #[cfg(test)]
 mod test_utils;
 
+/// Organize files in a directory by their extension.
+#[derive(Parser, Debug)]
+#[command(name = "organizer", version, about)]
+struct Cli {
+  /// Preview how the directory would be organized without moving files.
+  #[arg(long)]
+  dry_run: bool,
+
+  /// Group files into `year/month` subfolders inside each category.
+  #[arg(long)]
+  by_date: bool,
+
+  /// Undo the most recent organize run on the target directory.
+  #[arg(long)]
+  revert: bool,
+
+  /// The directory to organize (defaults to the OS Downloads directory).
+  #[arg(value_name = "DIR")]
+  dir: Option<PathBuf>,
+}
+
 fn main() -> anyhow::Result<()> {
   let colors = utils::Colors::from_env();
-  let args: Vec<String> = env::args().collect();
-  let args: Vec<&str> = args.iter().map(String::as_str).collect();
-  let parsed = utils::parse_args(&args);
-  let rest: Vec<&str> = parsed.rest.iter().map(String::as_str).collect();
-  let dir = utils::get_download_dir(&rest)?;
+  let cli = Cli::parse();
+  let dir = utils::get_download_dir(cli.dir.as_deref())?;
 
-  if parsed.revert {
+  if cli.revert {
     let moved = utils::revert_last(&dir)?;
     let files = noun(moved, "file", "files");
     let line = format!("Reverted — moved {files} back.");
@@ -23,9 +42,9 @@ fn main() -> anyhow::Result<()> {
     return Ok(());
   }
 
-  let by_date = parsed.by_date;
+  let by_date = cli.by_date;
 
-  if parsed.dry_run {
+  if cli.dry_run {
     let header = colors.paint(
       utils::Color::Previewed,
       &format!("Dry run — previewing how {dir} would be organized."),
@@ -68,17 +87,16 @@ fn main() -> anyhow::Result<()> {
   Ok(())
 }
 
-/// Print the destinations as a coloured tree.
+/// Print the destinations as a coloured tree, with directory names distinct
+/// from file leaves and dimmed box-drawing connectors.
 fn print_tree(
   colors: utils::Colors,
   destinations: &[String],
   color: utils::Color,
 ) {
   let refs: Vec<&str> = destinations.iter().map(String::as_str).collect();
-  let rendered = utils::render_tree(&refs);
-  for line in rendered.lines() {
-    println!("  {}", colors.paint(color, line));
-  }
+  let rendered = utils::render_tree(&refs, colors, color);
+  print!("{rendered}");
 }
 
 fn print_summary(

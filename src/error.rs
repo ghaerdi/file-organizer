@@ -47,9 +47,6 @@ pub enum AnyError {
   #[error("the Downloads directory could not be found")]
   DownloadDirNotFound,
 
-  #[error("too many arguments were provided")]
-  TooManyArguments,
-
   #[error("could not resolve the path {path}")]
   InvalidPath {
     path: PathBuf,

@@ -3,14 +3,18 @@ use crate::globals;
 use directories::UserDirs;
 use std::path::Path;
 
-pub fn get_download_dir(args: &[&str]) -> Result<String, AnyError> {
-  match args.len() {
-    1 => {
+/// Resolve the directory to organize.
+///
+/// When no explicit `dir` was supplied, prefer the OS-provided Downloads
+/// directory if it exists, falling back to `<home>/Downloads`. An explicit
+/// `dir` is canonicalised (and must exist).
+pub fn get_download_dir(dir: Option<&Path>) -> Result<String, AnyError> {
+  match dir {
+    None => {
       let user = UserDirs::new().ok_or(AnyError::DownloadDirNotFound)?;
       resolve_from_dir(user.download_dir(), user.home_dir())
     },
-    2 => {
-      let path = Path::new(args.get(1).ok_or(AnyError::DownloadDirNotFound)?);
+    Some(path) => {
       let canonical =
         path
           .canonicalize()
@@ -20,7 +24,6 @@ pub fn get_download_dir(args: &[&str]) -> Result<String, AnyError> {
           })?;
       Ok(canonical.to_string_lossy().into_owned())
     },
-    _ => Err(AnyError::TooManyArguments),
   }
 }
 
@@ -92,9 +95,8 @@ mod test {
   fn with_one_argument_canonicalizes() {
     let temp = TempDir::new("canon");
     let arg = temp.path().to_str().expect("temp path is utf-8");
-    let args = vec!["", arg];
     let dir =
-      get_download_dir(&args).expect("should canonicalize existing dir");
+      get_download_dir(Some(Path::new(arg))).expect("should canonicalize");
     // Compare against the canonicalized temp path: `fs::canonicalize` returns
     // a verbatim `\\?\...` path on Windows (and an absolute path on Unix), so
     // canonicalizing the expectation makes the equality check platform-stable.
@@ -104,16 +106,9 @@ mod test {
 
   #[test]
   fn with_one_argument_errors_on_missing_path() {
-    let args = vec!["", "./definitely-not-a-real-dir-xyz"];
     assert!(matches!(
-      get_download_dir(&args),
+      get_download_dir(Some(Path::new("./definitely-not-a-real-dir-xyz"))),
       Err(AnyError::InvalidPath { .. })
     ));
-  }
-
-  #[test]
-  fn too_many_arguments_is_error() {
-    let args = vec!["", "Foo", "Bar"];
-    assert!(get_download_dir(&args).is_err());
   }
 }

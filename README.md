@@ -56,9 +56,11 @@ Category directories are created lazily: only categories that actually receive
 files are materialised, so a run that touches only `Text` and `Image` leaves the
 other categories uncreated.
 
-Output is colour-coded when the program runs in a terminal (cyan tree/list
-entries, green moved files, yellow dry-run header, blue category header) and
-falls back to plain text when piped to a file or another command.
+Output is colour-coded when the program runs in a terminal and falls back to
+plain text when piped to a file or another command. Category directories are
+bold blue, file leaves are bold green (moved) or bold yellow (previewed), the
+tree's `├──`/`└──` connectors are dim gray, and the summary line is a muted
+cyan so the tree stays the focal point.
 [![Example](./example.gif)](./example.gif)
 
 Note: The script require the `$HOME/Downloads` directory when no command is passed.
