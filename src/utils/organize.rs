@@ -80,6 +80,12 @@ pub fn organize(
       });
     }
   }
+
+  // `destinations` is populated in filesystem `read_dir` order, which is
+  // non-deterministic across platforms/filesystems. Sort it so the reported
+  // output and the rendered tree are stable regardless of iteration order.
+  summary.destinations.sort();
+
   Ok(summary)
 }
 
@@ -268,11 +274,11 @@ mod test {
     assert_eq!(
       summary.destinations,
       vec![
-        "Text/a.txt".to_string(),
-        "Image/b.png".to_string(),
         "Compressed/c.zip".to_string(),
+        "Image/b.png".to_string(),
+        "Text/a.txt".to_string(),
       ],
-      "destinations captured in move order"
+      "destinations sorted alphabetically (deterministic output)"
     );
   }
 
