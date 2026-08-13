@@ -1,20 +1,21 @@
+use crate::error::AnyError;
 use crate::{globals, utils};
 use std::env::consts;
-use std::error::Error;
 use std::fs;
 
-pub fn organize(path: &str) -> Result<(), Box<dyn Error>> {
-  let main_dir = fs::read_dir(path).map_err(|_| "unable to open directory")?;
+pub fn organize(path: &str) -> Result<(), AnyError> {
+  let main_dir = fs::read_dir(path).map_err(AnyError::OpenDir)?;
   let map = utils::files_extension();
   let dirs = globals::DIRS.to_vec();
-  let other = globals::DIRS.last().ok_or("no Other category")?;
+  let other = globals::DIRS.last().ok_or(AnyError::NoOtherCategory)?;
 
   for entry in main_dir {
-    let entry = entry.map_err(|_| "unable to read directory entry")?.path();
-    let name = entry
-      .file_name()
-      .and_then(|n| n.to_str())
-      .ok_or("unable to determine file name")?;
+    let entry = entry.map_err(AnyError::ReadEntry)?.path();
+    let name = entry.file_name().and_then(|n| n.to_str()).ok_or_else(|| {
+      AnyError::FileName {
+        path: entry.clone(),
+      }
+    })?;
 
     if dirs.contains(&name) {
       continue;
@@ -39,6 +40,7 @@ pub fn organize(path: &str) -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod test {
+  #![allow(clippy::expect_used, clippy::unwrap_used, clippy::indexing_slicing)]
   use super::*;
   use crate::utils;
   use std::fs;

@@ -1,14 +1,12 @@
+use crate::error::AnyError;
 use crate::globals;
 use directories::UserDirs;
-use std::error::Error;
 use std::path::Path;
 
-static DOWNLOAD_DIR_NOT_FOUND: &str = "Downloads directory not found";
-
-pub fn get_download_dir(args: &[&str]) -> Result<String, Box<dyn Error>> {
+pub fn get_download_dir(args: &[&str]) -> Result<String, AnyError> {
   match args.len() {
     1 => {
-      let user = UserDirs::new().ok_or(DOWNLOAD_DIR_NOT_FOUND)?;
+      let user = UserDirs::new().ok_or(AnyError::DownloadDirNotFound)?;
       let fallback = format!("{}/{}", user.home_dir().display(), globals::DIR);
       let download = user
         .download_dir()
@@ -18,23 +16,27 @@ pub fn get_download_dir(args: &[&str]) -> Result<String, Box<dyn Error>> {
       if Path::new(&download).exists() {
         Ok(download)
       } else {
-        Err(DOWNLOAD_DIR_NOT_FOUND.into())
+        Err(AnyError::DownloadDirNotFound)
       }
     },
     2 => {
+      let path = Path::new(args.get(1).ok_or(AnyError::DownloadDirNotFound)?);
       let canonical =
-        Path::new(args.get(1).ok_or(DOWNLOAD_DIR_NOT_FOUND)?).canonicalize();
-      canonical.map_or_else(
-        |_| Err(DOWNLOAD_DIR_NOT_FOUND.into()),
-        |dir| Ok(dir.to_string_lossy().into_owned()),
-      )
+        path
+          .canonicalize()
+          .map_err(|source| AnyError::InvalidPath {
+            path: path.to_path_buf(),
+            source,
+          })?;
+      Ok(canonical.to_string_lossy().into_owned())
     },
-    _ => Err("too many arguments".into()),
+    _ => Err(AnyError::TooManyArguments),
   }
 }
 
 #[cfg(test)]
 mod test {
+  #![allow(clippy::expect_used, clippy::unwrap_used, clippy::indexing_slicing)]
   use super::*;
 
   #[test]

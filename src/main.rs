@@ -1,10 +1,10 @@
 use std::env;
-use std::error::Error;
 
+mod error;
 mod globals;
 mod utils;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> anyhow::Result<()> {
   let args: Vec<String> = env::args().collect();
   let args: Vec<&str> = args.iter().map(String::as_str).collect();
   let dir = utils::get_download_dir(&args)?;

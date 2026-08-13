@@ -1,16 +1,18 @@
+use crate::error::AnyError;
 use crate::globals;
-use std::error::Error;
 use std::fs;
 use std::path::Path;
 
-pub fn create_dirs(dir: &str) -> Result<(), Box<dyn Error>> {
+pub fn create_dirs(dir: &str) -> Result<(), AnyError> {
   for value in globals::DIRS {
     let subdir = format!("{dir}/{value}");
     let path = Path::new(&subdir);
 
     if !path.exists() {
-      fs::create_dir(path)
-        .map_err(|_| format!("unable to create {value} directory"))?;
+      fs::create_dir(path).map_err(|source| AnyError::CreateDir {
+        name: String::from(value),
+        source,
+      })?;
       println!("{value} directory created");
     }
   }
@@ -19,6 +21,7 @@ pub fn create_dirs(dir: &str) -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod test {
+  #![allow(clippy::expect_used, clippy::unwrap_used, clippy::indexing_slicing)]
   use super::*;
   use std::fs;
   use std::path::Path;
