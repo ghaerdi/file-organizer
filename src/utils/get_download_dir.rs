@@ -1,82 +1,63 @@
 use crate::globals;
 use directories::UserDirs;
+use std::error::Error;
 use std::path::Path;
 
 static DOWNLOAD_DIR_NOT_FOUND: &str = "Downloads directory not found";
 
-pub fn get_download_dir(args: &[&str]) -> String {
+pub fn get_download_dir(args: &[&str]) -> Result<String, Box<dyn Error>> {
   match args.len() {
     1 => {
-      let user = UserDirs::new().unwrap();
-      let download = user.download_dir();
+      let user = UserDirs::new().ok_or(DOWNLOAD_DIR_NOT_FOUND)?;
+      let fallback = format!("{}/{}", user.home_dir().display(), globals::DIR);
+      let download = user
+        .download_dir()
+        .filter(|d| d.exists())
+        .map_or(fallback, |d| d.to_string_lossy().into_owned());
 
-      match download {
-        None => {
-          let home = user.home_dir();
-          let download = format!("{}/{}", home.display(), globals::DIR);
-          let download = Path::new(&download);
-
-          if !download.exists() {
-            panic!("{}", DOWNLOAD_DIR_NOT_FOUND);
-          }
-
-          download.to_str().unwrap().to_string()
-        },
-        Some(dir) => {
-          if !dir.exists() {
-            panic!("{}", DOWNLOAD_DIR_NOT_FOUND);
-          }
-
-          dir.to_str().unwrap().to_string()
-        },
+      if Path::new(&download).exists() {
+        Ok(download)
+      } else {
+        Err(DOWNLOAD_DIR_NOT_FOUND.into())
       }
     },
     2 => {
-      let download = Path::new(&args[1]);
-      let download = match download.canonicalize() {
-        Ok(dir) => dir,
-        Err(_) => panic!("{}", DOWNLOAD_DIR_NOT_FOUND),
-      };
-
-      download.to_str().unwrap().to_string()
+      let canonical =
+        Path::new(args.get(1).ok_or(DOWNLOAD_DIR_NOT_FOUND)?).canonicalize();
+      canonical.map_or_else(
+        |_| Err(DOWNLOAD_DIR_NOT_FOUND.into()),
+        |dir| Ok(dir.to_string_lossy().into_owned()),
+      )
     },
-    _ => {
-      panic!("to mutch arguments");
-    },
+    _ => Err("too many arguments".into()),
   }
 }
 
 #[cfg(test)]
 mod test {
   use super::*;
-  use std::panic::catch_unwind;
 
   #[test]
   fn without_arguments() {
     let args = vec![""];
-    let result = catch_unwind(|| get_download_dir(&args));
-
-    match result {
+    match get_download_dir(&args) {
       Ok(dir) => assert!(dir.contains("Downloads")),
-      Err(_) => assert!(result.is_err()),
+      Err(_) => {},
     }
   }
 
   #[test]
   fn with_one_argument() {
     let args = vec!["", "Downloads"];
-    let result = catch_unwind(|| get_download_dir(&args));
-
-    match result {
+    match get_download_dir(&args) {
       Ok(dir) => assert!(dir.contains("Downloads")),
-      Err(_) => assert!(result.is_err()),
+      Err(_) => {},
     }
   }
 
   #[test]
-  #[should_panic]
-  fn pass_more_of_one_argument() {
+  fn too_many_arguments_is_error() {
     let args = vec!["", "Foo", "Bar"];
-    get_download_dir(&args);
+    assert!(get_download_dir(&args).is_err());
   }
 }

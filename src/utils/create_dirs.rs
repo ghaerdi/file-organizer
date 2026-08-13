@@ -1,18 +1,20 @@
 use crate::globals;
+use std::error::Error;
 use std::fs;
 use std::path::Path;
 
-pub fn create_dirs(dir: &str) {
+pub fn create_dirs(dir: &str) -> Result<(), Box<dyn Error>> {
   for value in globals::DIRS {
-    let path = format!("{dir}/{value}");
-    let path = Path::new(&path);
+    let subdir = format!("{dir}/{value}");
+    let path = Path::new(&subdir);
 
     if !path.exists() {
-      let error_msg = format!("unable to create {value} directory");
-      fs::create_dir(path).unwrap_or_else(|_| panic!("{}", error_msg));
+      fs::create_dir(path)
+        .map_err(|_| format!("unable to create {value} directory"))?;
       println!("{value} directory created");
     }
   }
+  Ok(())
 }
 
 #[cfg(test)]
@@ -27,7 +29,7 @@ mod test {
   fn create_directories() {
     let main_dir = "./create_dirs";
     fs::create_dir(&main_dir).expect("unable to create");
-    create_dirs(&main_dir);
+    create_dirs(&main_dir).expect("unable to create subdirectories");
 
     assert!(Path::new("./create_dirs/Text").exists());
     assert!(Path::new("./create_dirs/Image").exists());
