@@ -33,6 +33,9 @@ pub struct RunRecord {
   pub moves: Vec<MoveRecord>,
 }
 
+/// Directory name the register lives in, inside the user's state directory.
+const APP_DIR: &str = "file-organizer";
+
 /// File name of the register inside the config directory.
 /// A single shared register file lives here; runs are distinguished by their
 /// recorded `dir` field.
@@ -40,18 +43,85 @@ fn register_file() -> String {
   "register.log".to_string()
 }
 
+/// The platform-specific layout used to resolve the state directory.
+// The variants are matched against the current platform at runtime and are
+// all exercised by the tests, so the compiler sees them as used even when
+// only one of them is reachable on the host platform.
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Platform {
+  /// Linux, BSD and other Unix systems: `$XDG_STATE_HOME` or
+  /// `~/.local/state`.
+  Unix,
+  /// macOS: `~/Library/Application Support`.
+  MacOs,
+  /// Windows: `%LOCALAPPDATA%`.
+  Windows,
+}
+
+#[cfg(target_os = "windows")]
+const CURRENT_PLATFORM: Platform = Platform::Windows;
+#[cfg(target_os = "macos")]
+const CURRENT_PLATFORM: Platform = Platform::MacOs;
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+const CURRENT_PLATFORM: Platform = Platform::Unix;
+
+/// Resolve the state directory from explicit inputs.
+///
+/// `$XDG_STATE_HOME` wins on every platform when it points to an absolute
+/// path, so users can always redirect the register. Otherwise the platform
+/// default applies. `local_app_data` is only used on Windows and `home` only
+/// on the Unix-like platforms, which keeps this function pure and testable.
+fn resolve_state_dir(
+  platform: Platform,
+  xdg_state_home: Option<std::path::PathBuf>,
+  local_app_data: Option<std::path::PathBuf>,
+  home: Option<std::path::PathBuf>,
+) -> Option<std::path::PathBuf> {
+  if let Some(dir) = xdg_state_home {
+    if dir.is_absolute() {
+      return Some(dir);
+    }
+  }
+  match platform {
+    Platform::Windows => local_app_data,
+    Platform::MacOs => {
+      home.map(|home| home.join("Library").join("Application Support"))
+    },
+    Platform::Unix => home.map(|home| home.join(".local").join("state")),
+  }
+}
+
+/// Read an environment variable as a path.
+fn env_path(name: &str) -> Option<std::path::PathBuf> {
+  std::env::var_os(name).map(std::path::PathBuf::from)
+}
+
 /// Resolve the absolute path of the register log inside the user's state
-/// directory: `$XDG_STATE_HOME/file-organizer/register.log`, or
-/// `~/.local/state/file-organizer/register.log` on a typical Linux system.
+/// directory.
+///
+/// The state directory is resolved per platform so the register is always
+/// writable:
+///
+/// - `$XDG_STATE_HOME/file-organizer/register.log` when the variable is set to
+///   an absolute path, on every platform.
+/// - `~/.local/state/file-organizer/register.log` on Linux and other Unix
+///   systems.
+/// - `~/Library/Application Support/file-organizer/register.log` on macOS.
+/// - `%LOCALAPPDATA%\file-organizer\register.log` on Windows.
 ///
 /// A state-directory register persists across reboots (so `--revert` can still
 /// undo runs older than the last boot) while staying out of the user's config
 /// directory. `--revert` resolves the very same path.
 pub fn register_path() -> Result<std::path::PathBuf, AnyError> {
-  let dirs = directories::ProjectDirs::from("", "", "file-organizer")
-    .ok_or(AnyError::NoRegisterDir)?;
-  let state = dirs.state_dir().ok_or(AnyError::NoRegisterDir)?;
-  Ok(state.join(register_file()))
+  let state = resolve_state_dir(
+    CURRENT_PLATFORM,
+    env_path("XDG_STATE_HOME"),
+    env_path("LOCALAPPDATA"),
+    directories::BaseDirs::new().map(|dirs| dirs.home_dir().to_path_buf()),
+  )
+  .ok_or(AnyError::NoRegisterDir)?;
+  Ok(state.join(APP_DIR).join(register_file()))
 }
 
 /// Serialise a [`RunRecord`] into a single JSON line (no trailing newline).
@@ -258,6 +328,99 @@ mod test {
     let path = temp.path().join("register.log");
     let record = dir.clone();
     (temp, path, record)
+  }
+
+  #[test]
+  fn xdg_state_home_wins_on_every_platform() {
+    let xdg = Some(std::env::temp_dir().join("xdg-state"));
+    let expected = xdg.clone();
+    for platform in [Platform::Unix, Platform::MacOs, Platform::Windows] {
+      let resolved = resolve_state_dir(
+        platform,
+        xdg.clone(),
+        Some(std::path::PathBuf::from("/local/app/data")),
+        Some(std::path::PathBuf::from("/home/user")),
+      );
+      assert_eq!(
+        resolved, expected,
+        "XDG_STATE_HOME must win on {platform:?}"
+      );
+    }
+  }
+
+  #[test]
+  fn relative_xdg_state_home_is_ignored() {
+    let home = std::path::PathBuf::from("/home/user");
+    let resolved = resolve_state_dir(
+      Platform::Unix,
+      Some(std::path::PathBuf::from("relative/state")),
+      None,
+      Some(home.clone()),
+    );
+    assert_eq!(
+      resolved,
+      Some(home.join(".local").join("state")),
+      "a relative XDG_STATE_HOME must fall back to the platform default"
+    );
+  }
+
+  #[test]
+  fn macos_uses_application_support() {
+    let home = std::path::PathBuf::from("/Users/user");
+    let resolved =
+      resolve_state_dir(Platform::MacOs, None, None, Some(home.clone()));
+    assert_eq!(
+      resolved,
+      Some(home.join("Library").join("Application Support")),
+      "macOS must resolve the register under Application Support"
+    );
+  }
+
+  #[test]
+  fn windows_uses_local_app_data() {
+    let local = std::path::PathBuf::from("C:\\Users\\user\\AppData\\Local");
+    let resolved = resolve_state_dir(
+      Platform::Windows,
+      None,
+      Some(local.clone()),
+      Some(std::path::PathBuf::from("C:\\Users\\user")),
+    );
+    assert_eq!(
+      resolved,
+      Some(local),
+      "Windows must resolve the register under LOCALAPPDATA"
+    );
+  }
+
+  #[test]
+  fn unix_uses_local_state() {
+    let home = std::path::PathBuf::from("/home/user");
+    let resolved =
+      resolve_state_dir(Platform::Unix, None, None, Some(home.clone()));
+    assert_eq!(
+      resolved,
+      Some(home.join(".local").join("state")),
+      "Unix must resolve the register under .local/state"
+    );
+  }
+
+  #[test]
+  fn register_path_is_absolute_and_ends_with_the_register_file() {
+    let path = register_path().expect("register path must resolve");
+    assert!(path.is_absolute(), "register path must be absolute");
+    assert_eq!(
+      path.file_name().and_then(|name| name.to_str()),
+      Some("register.log"),
+      "register path must end with register.log"
+    );
+    assert_eq!(
+      path
+        .parent()
+        .and_then(|parent| parent.file_name())
+        .and_then(|name| name.to_str()),
+      Some(APP_DIR),
+      "register path must live in the file-organizer directory"
+    );
   }
 
   #[test]

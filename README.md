@@ -32,8 +32,8 @@ organizer [--dry-run] [--by-date] [--revert] [DIR]
 | `--revert` | Undo the most recent run on `DIR` (or `$HOME/Downloads`): move every file back where it came from |
 
 Every run that moves files appends a JSON register (one line per run) to a
-local state file at `~/.local/state/file-organizer/register.log` (honouring
-`$XDG_STATE_HOME` when set). The register records the source and destination of
+local state file (honouring `$XDG_STATE_HOME` when set). The register records
+the source and destination of
 each file, so `--revert` can replay the moves in reverse and restore the
 original layout. If a destination is already occupied when reverting, the file
 is given a numeric suffix (e.g. `a-1.txt`) rather than overwriting anything.
@@ -44,7 +44,15 @@ register and a second `--revert` undoes the run before it.
 
 The register lives in the user's state directory rather than the config
 directory, so it is local to the machine, survives reboots (runs older than the
-last boot can still be reverted), and stays out of your `~/.config`.
+last boot can still be reverted), and stays out of your `~/.config`. Its
+location is resolved per platform:
+
+| Platform | Register path |
+|----------|---------------|
+| Linux and other Unix | `$XDG_STATE_HOME/file-organizer/register.log`, or `~/.local/state/file-organizer/register.log` |
+| macOS | `~/Library/Application Support/file-organizer/register.log` |
+| Windows | `%LOCALAPPDATA%\file-organizer\register.log` |
+
 Files are grouped into these categories by extension: `Text`, `Image`, `Video`,
 `Audio`, `Compressed`, `Executable`, `Code`, `Data`, `Disk`, `Font`, and `Other`.
 

@@ -286,7 +286,7 @@ mod test {
       "source moved out during by-date organization"
     );
     let expect = format!("{expected_parent}/a.txt");
-    assert!(Path::new(&expect).exists(), "file landed at: {}", &expect);
+    assert!(Path::new(&expect).exists(), "file landed at: {}", expect);
     assert_eq!(
       fs::read_to_string(&expect).expect("read moved file"),
       "content",

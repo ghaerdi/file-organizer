@@ -19,9 +19,12 @@
   category by modification date.
 - **`--revert`** — undo the most recent organize run on the target directory,
   moving every file back where it came from and pruning emptied category/date
-  branches. Runs are recorded in a JSON register at
-  `~/.local/state/file-organizer/register.log` (honouring `$XDG_STATE_HOME`).
-  Multiple `--revert` calls undo runs in reverse order.
+  branches. Runs are recorded in a JSON register inside the user's state
+  directory: `~/.local/state/file-organizer/register.log` on Linux,
+  `~/Library/Application Support/file-organizer/register.log` on macOS and
+  `%LOCALAPPDATA%\file-organizer\register.log` on Windows (honouring
+  `$XDG_STATE_HOME` when set). Multiple `--revert` calls undo runs in reverse
+  order.
 - **Collision-safe moves** — when a file's name already exists in a category,
   the incoming file is renamed with a numeric suffix (e.g. `report-1.pdf`)
   instead of overwriting the original.
